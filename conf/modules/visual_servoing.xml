@@ -1,6 +1,6 @@
 <!DOCTYPE module SYSTEM "module.dtd">
 
-<module name="mav_course_exercise">
+<module name="visual_servoing">
   <doc>
     <description>
     Exercise module for Autonomous Flight of MAV Course
@@ -11,11 +11,11 @@
   </dep>
   <!-- TODO Specify header, init, periodic, makefile sections  -->
   <header>
-    <file name="mav_exercise.h"/>
+    <file name="visual_servoing.h"/>
   </header>
-  <init fun="mav_exercise_init()"/>
-  <periodic fun="mav_exercise_periodic()" freq="4"/>
+  <init fun="visual_servoing_init()"/>
+  <periodic fun="visual_servoing_periodic()" freq="4"/>
   <makefile target="ap|nps">
-    <file name="mav_exercise.c"/>
+    <file name="visual_servoing.c"/>
   </makefile>
 </module>

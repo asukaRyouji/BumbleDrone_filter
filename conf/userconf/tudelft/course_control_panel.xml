@@ -23,7 +23,7 @@
     <program name="Simulator" command="sw/simulator/pprzsim-launch"/>
     <program name="Joystick" command="sw/ground_segment/joystick/input2ivy">
       <arg flag="-ac" constant="@AIRCRAFT"/>
-      <arg flag="sm600.xml"/>
+      <arg flag="turnigy_9xr.xml"/>
     </program>
     <program name="Environment Simulator" command="sw/simulator/gaia"/>
     <program name="NatNet3" command="sw/ground_segment/python/natnet3.x/natnet2ivy.py"/>
@@ -77,8 +77,8 @@
       </program>
       <program name="Joystick" command="sw/ground_segment/joystick/input2ivy">
         <arg flag="-ac" constant="@AIRCRAFT"/>
-        <arg flag="sm600.xml"/>
-        <arg flag="-d 0"/>
+        <arg flag="turnigy_9xr.xml"/>
+        <arg flag="-d 1"/>
       </program>
       <program name="Gazebo"/>
     </session>
@@ -92,8 +92,8 @@
       </program>
       <program name="Joystick" command="sw/ground_segment/joystick/input2ivy">
         <arg flag="-ac" constant="@AIRCRAFT"/>
-        <arg flag="sm600.xml"/>
-        <arg flag="-d 0"/>
+        <arg flag="turnigy_9xr.xml"/>
+        <arg flag="-d 1"/>
       </program>
       <program name="NatNet3">
         <arg flag="-ac 9999" constant="@AC_ID"/>
