@@ -34,7 +34,18 @@ extern float oag_floor_count_frac;  // floor detection threshold as a fraction o
 extern float oag_max_speed;         // max flight speed [m/s]
 extern float oag_heading_rate;      // heading rate setpoint [rad/s]
 
-extern void visual_servoing_init(void);
-extern void visual_servoing_periodic(void);
+#define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
+#define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_MODULE
+
+// Implement own horizontal loop:
+extern void guidance_h_module_init(void);
+extern void guidance_h_module_enter(void);
+extern void guidance_h_module_run(bool in_flight);
+extern void guidance_h_module_read_rc(void);
+
+// Implement own Vertical loops
+extern void guidance_v_module_init(void);
+extern void guidance_v_module_enter(void);
+extern void guidance_v_module_run(bool in_flight);
 
 #endif

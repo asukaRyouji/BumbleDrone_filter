@@ -50,14 +50,6 @@
 
 uint8_t chooseRandomIncrementAvoidance(void);
 
-enum navigation_state_t {
-  SAFE,
-  OBSTACLE_FOUND,
-  SEARCH_FOR_SAFE_HEADING,
-  OUT_OF_BOUNDS,
-  REENTER_ARENA
-};
-
 // define settings
 float oag_color_count_frac = 0.18f;       // obstacle detection threshold as a fraction of total of image
 float oag_floor_count_frac = 0.05f;       // floor detection threshold as a fraction of total of image
@@ -123,7 +115,7 @@ static void floor_detection_cb(uint8_t __attribute__((unused)) sender_id,
 /*
  * Initialisation function
  */
-void visual_servoing_init(void)
+void visual_servoing_module_init(void)
 {
   // Initialise random values
   srand(time(NULL));
@@ -137,165 +129,109 @@ void visual_servoing_init(void)
 /*
  * Function that checks it is safe to move forwards, and then sets a forward velocity setpoint or changes the heading
  */
-void visual_servoing_periodic(void)
-{
-  // Only run the mudule if we are in the correct flight mode
-  if (guidance_h.mode != GUIDANCE_H_MODE_GUIDED) {
-    navigation_state = OBSTACLE_FOUND;
-    obstacle_free_confidence = 0;
-    return;
-  }
-
-  // compute current color thresholds
-  int32_t color_count_threshold = oag_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-  int32_t floor_count_threshold = oag_floor_count_frac * front_camera.output_size.w * front_camera.output_size.h;
-  float floor_centroid_frac = floor_centroid / (float)front_camera.output_size.h / 2.f;
-
+void visual_servoing_module_run(void)
+{ 
   // VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
   // VERBOSE_PRINT("Box_centroid_x %d, Box_centroid_y %d\n", box_centroid_x, box_centroid_y);
   // VERBOSE_PRINT("Floor centroid: %f\n", floor_centroid_frac);
 
-  // update our safe confidence using color threshold
-  if(color_count < color_count_threshold){
-    obstacle_free_confidence++;
-  } else {
-    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+  // move x, y
+  struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
+  // Get nominal thrust from guidance
+  nominal_thrust = (float)guidance_v_nominal_throttle / MAX_PPRZ; // copy this value from guidance
+
+  divergence = (color_count - last_color_count) / last_color_count;
+  vx_setpoint = visual_servo_x_kp * (divergence_setpoint - divergence);
+  vy_setpoint = visual_servo_y_kp * box_centroid_y;
+
+  // desired accelerations
+  float mu_x = visual_servo_x_kp * (divergence_setpoint - divergence);
+  float mu_y = visual_servo_y_kp * box_centroid_y;
+  float mu_z = visual_servo_z_kp * box_centroid_x;
+
+  // set the desired thrust
+  float thrust_set = sqrtf(pow(mu_x, 2) + pow(mu_y, 2) + pow(mu_z, 2)) + nominal_thrust;
+  if (in_flight) {
+    Bound(thrust_set, 0.25 * nominal_thrust * MAX_PPRZ, MAX_PPRZ);
+    stabilization_cmd[COMMAND_THRUST] = thrust_set;
   }
 
-  // bound obstacle_free_confidence
-  Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
+  // set desired angles
+  float pitch_sp = atan2f(mu_x, thrust_set);
+  float roll_sp = asinf(mu_y/thrust_set);
 
-  float speed_sp = fminf(oag_max_speed, 0.2f * obstacle_free_confidence);
+  float error_pitch = pitch_sp - DegOfRad(attitude->theta);
+  float error_roll = roll_sp - DegOfRad(attitude->psi);
+  float sum_pitch_error += error_pitch;
+  float sum_roll_error += error_roll;
+  float pitch_cmd;
+  float roll_cmd;
 
-  switch (navigation_state){
-    case SAFE:
-      if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0){
-        navigation_state = OBSTACLE_FOUND;
-      } else {
-        guidance_h_set_body_vel(speed_sp, 0);
-      }
+  pitch_cmd = RadOfDeg(error_pitch *  P_hor +  I_hor * sum_pitch_error);
+  roll_cmd = RadOfDeg(error_roll *  P_hor +  I_hor * sum_roll_error);
 
-      break;
-    case OBSTACLE_FOUND: ;
-      // move x, y
-      struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
-      // Get nominal thrust from guidance
-      nominal_thrust = (float)guidance_v_nominal_throttle / MAX_PPRZ; // copy this value from guidance
+  BoundAbs(pitch_cmd, RadOfDeg(10.0));
+  BoundAbs(roll_cmd, RadOfDeg(10.0));
 
-      divergence = (color_count - last_color_count) / last_color_count;
-      vx_setpoint = visual_servo_x_kp * (divergence_setpoint - divergence);
-      vy_setpoint = visual_servo_y_kp * box_centroid_y;
-  
-      // desired accelerations
-      float mu_x = visual_servo_x_kp * (divergence_setpoint - divergence);
-      float mu_y = visual_servo_y_kp * box_centroid_y;
-      float mu_z = visual_servo_z_kp * box_centroid_x;
+  float psi_cmd =
+    attitude->psi;
 
-      // set the desired thrust
-      float thrust_set = sqrtf(pow(mu_x, 2) + pow(mu_y, 2) + pow(mu_z, 2)) + nominal_thrust;
-      if (in_flight) {
-        Bound(thrust_set, 0.25 * nominal_thrust * MAX_PPRZ, MAX_PPRZ);
-        stabilization_cmd[COMMAND_THRUST] = thrust_set;
-      }
+  struct Int32Eulers rpy = { .phi = (int32_t)ANGLE_BFP_OF_REAL(roll_cmd),
+        .theta = (int32_t)ANGLE_BFP_OF_REAL(pitch_cmd), .psi = (int32_t)ANGLE_BFP_OF_REAL(psi_cmd)
+  };
 
-      // set desired angles
-      float pitch_sp = atan2f(mu_x, thrust_set);
-      float roll_sp = asinf(mu_y/thrust_set);
+  // set the desired roll pitch and yaw:
+  stabilization_indi_set_rpy_setpoint_i(&rpy);
+  // execute attitude stabilization:
+  stabilization_attitude_run(in_flight);
+  VERBOSE_PRINT("vy_setpoint: %f, Box_centroid_y %d\n", vy_setpoint, box_centroid_y);
+  VERBOSE_PRINT("divergence: %f, color_count %d last_color_count %d\n", divergence, color_count, last_color_count);
 
-      float error_pitch = pitch_sp - DegOfRad(attitude->theta);
-      float error_roll = roll_sp - DegOfRad(attitude->psi);
-      float sum_pitch_error += error_pitch;
-      float sum_roll_error += error_roll;
-      float pitch_cmd;
-      float roll_cmd;
+  // // move z
+  // vz_setpoint = visual_servo_z_kp * box_centroid_x;
+  // guidance_v_set_vz(vz_setpoint);
+  // VERBOSE_PRINT("vz_setpoint: %f, Box_centroid_x %d\n", vz_setpoint, box_centroid_x);
 
-      pitch_cmd = RadOfDeg(error_pitch *  P_hor +  I_hor * sum_pitch_error);
-      roll_cmd = RadOfDeg(error_roll *  P_hor +  I_hor * sum_roll_error);
-
-      BoundAbs(pitch_cmd, RadOfDeg(10.0));
-      BoundAbs(roll_cmd, RadOfDeg(10.0));
-
-      float psi_cmd =
-        attitude->psi;
-
-      struct Int32Eulers rpy = { .phi = (int32_t)ANGLE_BFP_OF_REAL(roll_cmd),
-           .theta = (int32_t)ANGLE_BFP_OF_REAL(pitch_cmd), .psi = (int32_t)ANGLE_BFP_OF_REAL(psi_cmd)
-      };
-
-      // set the desired roll pitch and yaw:
-      stabilization_indi_set_rpy_setpoint_i(&rpy);
-      // execute attitude stabilization:
-      stabilization_attitude_run(in_flight);
-      VERBOSE_PRINT("vy_setpoint: %f, Box_centroid_y %d\n", vy_setpoint, box_centroid_y);
-      VERBOSE_PRINT("divergence: %f, color_count %d last_color_count %d\n", divergence, color_count, last_color_count);
-
-      // // move z
-      // vz_setpoint = visual_servo_z_kp * box_centroid_x;
-      // guidance_v_set_vz(vz_setpoint);
-      // VERBOSE_PRINT("vz_setpoint: %f, Box_centroid_x %d\n", vz_setpoint, box_centroid_x);
-
-      visual_servo_x_kp = 0.6;
-      last_color_count = color_count;
-
-
-      // randomly select new search direction
-      // chooseRandomIncrementAvoidance();
-
-      // navigation_state = SEARCH_FOR_SAFE_HEADING;
-
-      break;
-    case SEARCH_FOR_SAFE_HEADING:
-      guidance_h_set_heading_rate(avoidance_heading_direction * oag_heading_rate);
-
-      // make sure we have a couple of good readings before declaring the way safe
-      if (obstacle_free_confidence >= 2){
-        guidance_h_set_heading(stateGetNedToBodyEulers_f()->psi);
-        navigation_state = SAFE;
-      }
-      break;
-    case OUT_OF_BOUNDS:
-      // stop
-      guidance_h_set_body_vel(0, 0);
-
-      // start turn back into arena
-      guidance_h_set_heading_rate(avoidance_heading_direction * RadOfDeg(15));
-
-      navigation_state = REENTER_ARENA;
-
-      break;
-    case REENTER_ARENA:
-      // force floor center to opposite side of turn to head back into arena
-      if (floor_count >= floor_count_threshold && avoidance_heading_direction * floor_centroid_frac >= 0.f){
-        // return to heading mode
-        guidance_h_set_heading(stateGetNedToBodyEulers_f()->psi);
-
-        // reset safe counter
-        obstacle_free_confidence = 0;
-
-        // ensure direction is safe before continuing
-        navigation_state = SAFE;
-      }
-      break;
-    default:
-      break;
-  }
-  return;
+  visual_servo_x_kp = 0.6;
+  last_color_count = color_count;
 }
 
-/*
- * Sets the variable 'incrementForAvoidance' randomly positive/negative
- */
-uint8_t chooseRandomIncrementAvoidance(void)
+////////////////////////////////////////////////////////////////////
+// Call our controller
+// Implement own Horizontal loops
+void guidance_h_module_init(void)
 {
-  // Randomly choose CW or CCW avoiding direction
-  if (rand() % 2 == 0) {
-    avoidance_heading_direction = 1.f;
-    VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction * oag_heading_rate);
-  } else {
-    avoidance_heading_direction = -1.f;
-    VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction * oag_heading_rate);
-  }
-  return false;
+  visual_servo_module_init();
+}
+
+void guidance_h_module_enter(void)
+{
+  visual_servo_module_init();
+}
+
+void guidance_h_module_read_rc(void)
+{
+  
+}
+
+void guidance_h_module_run(bool in_flight)
+{
+  // Call full inner-/outerloop / horizontal-/vertical controller:
+  visual_servo_module_run(in_flight);
+}
+
+void guidance_v_module_init(void)
+{
+  // initialization of your custom vertical controller goes here
+}
+
+// Implement own Vertical loops
+void guidance_v_module_enter(void)
+{
+  // your code that should be executed when entering this vertical mode goes here
+}
+
+void guidance_v_module_run(UNUSED bool in_flight)
+{
+  // your vertical controller goes here
 }
