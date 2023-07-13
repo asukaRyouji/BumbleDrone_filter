@@ -25,9 +25,14 @@
  * define which filter to use.
  */
 
+#include <math.h>
 #include "modules/visual_servoing/visual_servoing.h"
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
 #include "firmwares/rotorcraft/guidance/guidance_v.h"
+#include "firmwares/rotorcraft/stabilization.h"
+#include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
+#include "firmwares/rotorcraft/stabilization/stabilization_indi_simple.h"
+#include "math/pprz_algebra_float.h"
 #include "generated/airframe.h"
 #include "state.h"
 #include "modules/core/abi.h"
@@ -70,17 +75,20 @@ float avoidance_heading_direction = 0;  // heading change direction for avoidanc
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead if safe.
 int16_t box_centroid_x = 0;
 int16_t box_centroid_y = 0;
+float nominal_thrust = 0;
 
 const int16_t max_trajectory_confidence = 5;  // number of consecutive negative object detections to be sure we are obstacle free
 
 // define visual servo controller variables
-float divergence_setpoint = 4;
+float divergence_setpoint = 1;
 float vx_setpoint = 0;
 float vy_setpoint = 0;
 float vz_setpoint = 0;
 float visual_servo_x_kp = 0;
 float visual_servo_y_kp = -0.005;
 float visual_servo_z_kp = -0.005;
+float P_hor = 0;
+float I_hor = 0;
 
 // This call back will be used to receive the color count from the orange detector
 #ifndef ORANGE_AVOIDER_VISUAL_DETECTION_ID
@@ -170,21 +178,65 @@ void visual_servoing_periodic(void)
       }
 
       break;
-    case OBSTACLE_FOUND:
+    case OBSTACLE_FOUND: ;
       // move x, y
-      divergence = (color_count - last_color_count) / (4 * sqrtf(last_color_count) + 4);
+      struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
+      // Get nominal thrust from guidance
+      nominal_thrust = (float)guidance_v_nominal_throttle / MAX_PPRZ; // copy this value from guidance
+
+      divergence = (color_count - last_color_count) / last_color_count;
       vx_setpoint = visual_servo_x_kp * (divergence_setpoint - divergence);
       vy_setpoint = visual_servo_y_kp * box_centroid_y;
-      guidance_h_set_body_vel(vx_setpoint, vy_setpoint);
+  
+      // desired accelerations
+      float mu_x = visual_servo_x_kp * (divergence_setpoint - divergence);
+      float mu_y = visual_servo_y_kp * box_centroid_y;
+      float mu_z = visual_servo_z_kp * box_centroid_x;
+
+      // set the desired thrust
+      float thrust_set = sqrtf(pow(mu_x, 2) + pow(mu_y, 2) + pow(mu_z, 2)) + nominal_thrust;
+      if (in_flight) {
+        Bound(thrust_set, 0.25 * nominal_thrust * MAX_PPRZ, MAX_PPRZ);
+        stabilization_cmd[COMMAND_THRUST] = thrust_set;
+      }
+
+      // set desired angles
+      float pitch_sp = atan2f(mu_x, thrust_set);
+      float roll_sp = asinf(mu_y/thrust_set);
+
+      float error_pitch = pitch_sp - DegOfRad(attitude->theta);
+      float error_roll = roll_sp - DegOfRad(attitude->psi);
+      float sum_pitch_error += error_pitch;
+      float sum_roll_error += error_roll;
+      float pitch_cmd;
+      float roll_cmd;
+
+      pitch_cmd = RadOfDeg(error_pitch *  P_hor +  I_hor * sum_pitch_error);
+      roll_cmd = RadOfDeg(error_roll *  P_hor +  I_hor * sum_roll_error);
+
+      BoundAbs(pitch_cmd, RadOfDeg(10.0));
+      BoundAbs(roll_cmd, RadOfDeg(10.0));
+
+      float psi_cmd =
+        attitude->psi;
+
+      struct Int32Eulers rpy = { .phi = (int32_t)ANGLE_BFP_OF_REAL(roll_cmd),
+           .theta = (int32_t)ANGLE_BFP_OF_REAL(pitch_cmd), .psi = (int32_t)ANGLE_BFP_OF_REAL(psi_cmd)
+      };
+
+      // set the desired roll pitch and yaw:
+      stabilization_indi_set_rpy_setpoint_i(&rpy);
+      // execute attitude stabilization:
+      stabilization_attitude_run(in_flight);
       VERBOSE_PRINT("vy_setpoint: %f, Box_centroid_y %d\n", vy_setpoint, box_centroid_y);
       VERBOSE_PRINT("divergence: %f, color_count %d last_color_count %d\n", divergence, color_count, last_color_count);
 
-      // move z
-      vz_setpoint = visual_servo_z_kp * box_centroid_x;
-      guidance_v_set_vz(vz_setpoint);
-      VERBOSE_PRINT("vz_setpoint: %f, Box_centroid_x %d\n", vz_setpoint, box_centroid_x);
+      // // move z
+      // vz_setpoint = visual_servo_z_kp * box_centroid_x;
+      // guidance_v_set_vz(vz_setpoint);
+      // VERBOSE_PRINT("vz_setpoint: %f, Box_centroid_x %d\n", vz_setpoint, box_centroid_x);
 
-      visual_servo_x_kp = 0.1;
+      visual_servo_x_kp = 0.6;
       last_color_count = color_count;
 
 
