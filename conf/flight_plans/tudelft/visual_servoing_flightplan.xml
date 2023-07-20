@@ -12,9 +12,9 @@ inline void setNav(void){
   autopilot_mode_auto2 = AP_MODE_NAV;
   autopilot_static_set_mode(AP_MODE_NAV);
 }
-inline void setGuided(void){
-  autopilot_mode_auto2 = AP_MODE_GUIDED;
-  autopilot_static_set_mode(AP_MODE_GUIDED);
+inline void setModule(void){
+  autopilot_mode_auto2 = AP_MODE_MODULE;
+  autopilot_static_set_mode(AP_MODE_MODULE);
 }
 </header>
   <waypoints>
@@ -111,7 +111,7 @@ inline void setGuided(void){
       <stay wp="STDBY"/>
     </block>
     <block key="g" name="START" strip_button="Go" strip_icon="lookfore.png">
-      <call_once fun="setGuided()"/>
+      <call_once fun="setModule()"/>
       <stay wp="STDBY"/>
     </block>
     <block name="STOP">

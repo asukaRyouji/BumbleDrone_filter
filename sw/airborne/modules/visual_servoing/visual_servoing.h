@@ -25,8 +25,27 @@
  * define which filter to use.
  */
 
-#ifndef ORANGE_AVOIDER_GUIDED_H
-#define ORANGE_AVOIDER_GUIDED_H
+#ifndef VISUAL_SERVOING_H
+#define VISUAL_SERVOING_H
+
+#include <std.h>
+
+struct VisualServoing {
+  float divergence_sp;          ///< agl = height from sonar (only used when using "fake" divergence)
+  float acc_x_sp;                 ///< low-pass version of agl
+  float acc_y_sp;               ///< low-pass filter constant
+  float ol_x_pgain;                    ///< vertical velocity as determined with sonar (only used when using "fake" divergence)
+  float ol_y_pgain;    ///< setpoint for constant divergence approach
+  float ol_z_pgain;                  ///< P-gain for constant divergence control (from divergence error to thrust)
+  float ol_x_dgain;                  ///< I-gain for constant divergence control
+  float ol_y_dgain;                  ///< D-gain for constant divergence control
+  float ol_z_dgain;             ///< Divergence estimate
+  float il_h_pgain;           ///< Previous divergence tracking error
+  float il_h_pgain;                ///< integration of the error for I-gain
+  float il_h_pgain;                  ///< difference of error for the D-gain
+};
+
+extern struct VisualServoing visual_servoing;
 
 // settings
 extern float oag_color_count_frac;  // obstacle detection threshold as a fraction of total of image

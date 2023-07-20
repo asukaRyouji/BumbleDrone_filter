@@ -5,16 +5,46 @@
     <description>
     Exercise module for Autonomous Flight of MAV Course
     </description>
+    <section name="VS" prefix="VS_">
+      <define name="DIVERGENCE_SP" value="1" description="P gain on height error"/>
+      <define name="ACC_X_SP" value="1" description="0 = fake vision, 1 = real vision"/>
+      <define name="ACC_Y_SP" value="1" description="0 = fake vision, 1 = real vision"/>
+      <define name="OL_X_PGAIN" value="0.10" description="I gain on summed height error"/>
+      <define name="OL_Y_PGAIN" value="0.1" description="D gain on summed height error"/>
+      <define name="OL_Z_PGAIN" value="1" description="0 = fake vision, 1 = real vision"/>
+      <define name="OL_X_DGAIN" value="0" description="0 = fixed gain control, 1 = adaptive gain control, 2 = exponential control"/>
+      <define name="OL_Y_DGAIN" value="0" description="0 = cov(uz, div), 1 = cov(div_past, div)"/>
+      <define name="OL_Z_DGAIN" value="0" description="Number of time steps for window size for getting the covariance over time."/>
+      <define name="IL_H_PGAIN" value="0.10" description="I gain on summed height error"/>
+      <define name="IL_H_IGAIN" value="1" description="0 = fake vision, 1 = real vision"/>
+      <define name="IL_H_DGAIN" value="0.1" description="D gain on summed height error"/>
+    </section>
   </doc>
+  <settings>
+    <dl_settings>
+      <dl_settings NAME="VisualServoing">
+        <dl_setting var="visual_servoing.divergence_sp" min="0" step="0.001" max="1" module="visual_servoing" shortname="divergence_sp" param="VS_DIVERGENCE_SP"/>
+        <dl_setting var="visual_servoing.ol_x_pgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="ol_x_pgain" param="VS_OL_X_PGAIN"/>
+        <dl_setting var="visual_servoing.ol_y_pgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="ol_y_pgain" param="VS_OL_Y_PGAIN"/>
+        <dl_setting var="visual_servoing.ol_z_pgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="ol_z_pgain" param="VS_OL_z_PGAIN"/>
+        <dl_setting var="visual_servoing.ol_x_dgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="ol_x_dgain" param="VS_OL_X_DGAIN"/>
+        <dl_setting var="visual_servoing.ol_y_dgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="ol_y_dgain" param="VS_OL_Y_DGAIN"/>
+        <dl_setting var="visual_servoing.ol_z_dgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="ol_z_dgain" param="VS_OL_z_DGAIN"/>
+        <dl_setting var="visual_servoing.il_h_pgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="il_h_pgain" param="VS_IL_H_PGAIN"/>
+        <dl_setting var="visual_servoing.il_h_igain" min="0" step="0.001" max="6" module="visual_servoing" shortname="il_h_igain" param="VS_IL_H_IGAIN"/>
+        <dl_setting var="visual_servoing.il_h_dgain" min="0" step="0.001" max="6" module="visual_servoing" shortname="il_h_dgain" param="VS_IL_H_DGAIN"/>
+      </dl_settings>
+    </dl_settings>
+  </settings>
+
   <dep>
     <depends>cv_detect_color_object</depends>
   </dep>
-  <!-- TODO Specify header, init, periodic, makefile sections  -->
+
   <header>
     <file name="visual_servoing.h"/>
   </header>
-  <init fun="visual_servoing_init()"/>
-  <periodic fun="visual_servoing_periodic()" freq="4"/>
+  
   <makefile target="ap|nps">
     <file name="visual_servoing.c"/>
   </makefile>
