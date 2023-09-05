@@ -133,7 +133,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   global_filters[filter-1].color_count = count;
   global_filters[filter-1].x_c = x_c;
   global_filters[filter-1].y_c = y_c;
-  global_filters[filter-1].updated = true;
+  global_filters[filter-1].updated = TRUE;
   pthread_mutex_unlock(&mutex);
 
   return img;
@@ -264,12 +264,14 @@ void color_object_detector_periodic(void)
   pthread_mutex_unlock(&mutex);
 
   if(local_filters[0].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
+    uint32_t now_ts = get_sys_time_usec();
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, now_ts, local_filters[0].x_c, local_filters[0].y_c,
         0, 0, local_filters[0].color_count, 0);
     local_filters[0].updated = false;
   }
   if(local_filters[1].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
+    uint32_t now_ts = get_sys_time_usec();
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, now_ts, local_filters[1].x_c, local_filters[1].y_c,
         0, 0, local_filters[1].color_count, 1);
     local_filters[1].updated = false;
   }

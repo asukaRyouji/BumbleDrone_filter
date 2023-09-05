@@ -31,9 +31,10 @@
 #include <std.h>
 
 struct VisualServoing {
+  float nominal_throttle;
   float divergence_sp;          ///< agl = height from sonar (only used when using "fake" divergence)
-  float acc_x_sp;                 ///< low-pass version of agl
-  float acc_y_sp;               ///< low-pass filter constant
+  float acc_y_sp;                 ///< low-pass version of agl
+  float acc_z_sp;               ///< low-pass filter constant
   float ol_x_pgain;                    ///< vertical velocity as determined with sonar (only used when using "fake" divergence)
   float ol_y_pgain;    ///< setpoint for constant divergence approach
   float ol_z_pgain;                  ///< P-gain for constant divergence control (from divergence error to thrust)
@@ -41,17 +42,23 @@ struct VisualServoing {
   float ol_y_dgain;                  ///< D-gain for constant divergence control
   float ol_z_dgain;             ///< Divergence estimate
   float il_h_pgain;           ///< Previous divergence tracking error
-  float il_h_pgain;                ///< integration of the error for I-gain
-  float il_h_pgain;                  ///< difference of error for the D-gain
+  float il_h_igain;                ///< integration of the error for I-gain
+  float il_h_dgain;                  ///< difference of error for the D-gain
+  float previous_box_x_err;
+  float box_x_err_sum;
+  float box_x_err_d;
+  float previous_box_y_err;
+  float box_y_err_sum;
+  float box_y_err_d;
+  float div_err;
+  float previous_div_err;
+  float div_err_sum;
+  float div_err_d;
+  float lp_const;
+  float div_factor;
 };
 
 extern struct VisualServoing visual_servoing;
-
-// settings
-extern float oag_color_count_frac;  // obstacle detection threshold as a fraction of total of image
-extern float oag_floor_count_frac;  // floor detection threshold as a fraction of total of image
-extern float oag_max_speed;         // max flight speed [m/s]
-extern float oag_heading_rate;      // heading rate setpoint [rad/s]
 
 #define GUIDANCE_H_MODE_MODULE_SETTING GUIDANCE_H_MODE_MODULE
 #define GUIDANCE_V_MODE_MODULE_SETTING GUIDANCE_V_MODE_MODULE
