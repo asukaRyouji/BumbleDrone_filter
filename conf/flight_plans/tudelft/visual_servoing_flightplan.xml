@@ -18,7 +18,7 @@ inline void setModule(void){
 }
 </header>
   <waypoints>
-    <waypoint lat="51.990631" lon="4.376796" name="HOME"/>
+    <waypoint lat="51.990634" lon="4.376789" name="HOME"/>
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
     <waypoint name="STDBY" x="1.9" y="1.0"/>
     <waypoint name="TD" x="0.8" y="-1.7"/>

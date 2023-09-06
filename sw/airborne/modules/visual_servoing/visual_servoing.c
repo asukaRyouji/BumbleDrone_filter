@@ -55,15 +55,15 @@
 #endif
 
 #ifndef VS_DIVERGENCE_SP
-#define VS_DIVERGENCE_SP 0.1
+#define VS_DIVERGENCE_SP 0.05
 #endif
 
 #ifndef VS_DIV_FACTOR
-#define VS_DIV_FACTOR 750
+#define VS_DIV_FACTOR 1000
 #endif
 
 #ifndef VS_OL_X_PGAIN
-#define VS_OL_X_PGAIN 5
+#define VS_OL_X_PGAIN 12
 #endif
 
 #ifndef VS_OL_Y_PGAIN
@@ -75,7 +75,7 @@
 #endif
 
 #ifndef VS_OL_X_DGAIN
-#define VS_OL_X_DGAIN 0
+#define VS_OL_X_DGAIN 0.15
 #endif
 
 #ifndef VS_OL_Y_DGAIN
@@ -99,15 +99,19 @@
 #endif
 
 #ifndef VS_LP_CONST
-#define VS_LP_CONST 0.1
+#define VS_LP_CONST 0.9
 #endif
 
 // define and initialise global variables
+float dt;
+float measurement_time = 0;
+float m_dt;
 float pitch_sp;
 float roll_sp;
 float vision_time, prev_vision_time;    // time stamp of the color object detector
 float color_count = 0;                // orange color count from color filter for obstacle detection
 float last_color_count = 1;
+float new_divergence;
 float divergence = 0;
 float true_divergence = 0;
 float box_centroid_x = 0;
@@ -123,7 +127,8 @@ static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev
                                 &(attitude->theta),
                                 &(attitude->phi),
                                 &divergence,
-                                &true_divergence);
+                                &true_divergence,
+                                &dt);
 }
 
 // This call back will be used to receive the color count from the orange detector
@@ -205,11 +210,13 @@ static void reset_all_vars(void)
 
 void visual_servoing_module_run(bool in_flight)
 { 
-  float dt = vision_time - prev_vision_time;
-
-  Bound(visual_servoing.lp_const, 0.001f, 1.f);
-  float lp_factor = dt / visual_servoing.lp_const;
-  Bound(lp_factor, 0.f, 1.f);
+  // // Vision update fps
+  // if (color_count != last_color_count) {
+  //   uint32_t new_measurement_time = get_sys_time_usec();
+  //   m_dt = (float)new_measurement_time / 1e6 - measurement_time;
+  //   measurement_time = (float)new_measurement_time / 1e6;
+  //   VERBOSE_PRINT("dt: %f", m_dt);
+  // }
 
   // move x, y
   struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
@@ -228,10 +235,23 @@ void visual_servoing_module_run(bool in_flight)
   true_centroid.y = -true_centroid.y;
 
   // check if new measurement received
-  if (dt > 1e-5f) {
+  if (color_count != last_color_count) {
+    dt = vision_time - prev_vision_time;
+    prev_vision_time = vision_time;
+
+    Bound(visual_servoing.lp_const, 0.001f, 1.f);
+    float lp_factor = dt / visual_servoing.lp_const;
+    Bound(lp_factor, 0.f, 1.f);
+
     // Compute divergence
-    float new_divergence = pow(fabsf(color_count - last_color_count), 0.33) / (dt * visual_servoing.div_factor);
-    true_divergence = speed->x / (4 - position->x);
+    if (dt > 0.1) {
+      new_divergence = divergence;
+    } else {
+      // new_divergence = pow(fabsf(color_count - last_color_count), 0.33) / (dt * visual_servoing.div_factor);
+      new_divergence = (color_count - last_color_count) / (dt * visual_servoing.div_factor * sqrt(color_count));
+    }
+
+    true_divergence = speed->x / sqrt(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(1.5 + position->z, 2));
 
     // deal with (unlikely) fast changes in divergence:
     static const float max_div_dt = 0.10f;
@@ -251,19 +271,20 @@ void visual_servoing_module_run(bool in_flight)
     // prev_m_time = m_time_s;
 
     // update control errors
-    visual_servoing.div_err = visual_servoing.divergence_sp - divergence;
+    visual_servoing.div_err = visual_servoing.divergence_sp - true_divergence;
     update_errors(true_centroid.x, box_centroid_y, visual_servoing.div_err, dt);
+    last_color_count = color_count;
   }
 
   // change divergence set-point
-  if (color_count > 10000 && set_point_count == 0) {
-    visual_servoing.divergence_sp = 0.2;
+  if (color_count > 200000 && set_point_count == 0) {
+    visual_servoing.divergence_sp = 0.15;
     set_point_count += 1;
-    VERBOSE_PRINT("divergence set to: %f", 0.2);
+    VERBOSE_PRINT("divergence set to: %f", 0.15);
   }
 
   // desired accelerations inertial
-  float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - 0.1;
+  float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
   float mu_y = 0; // -visual_servoing.ol_y_pgain * true_centroid.y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
   float mu_z = 9.81 + visual_servoing.ol_z_pgain * (position->z + 1.5);
 
@@ -292,9 +313,6 @@ void visual_servoing_module_run(bool in_flight)
   stabilization_indi_set_rpy_setpoint_i(&rpy);
   // execute attitude stabilization:
   stabilization_attitude_run(in_flight);
-
-  prev_vision_time = vision_time;
-  last_color_count = color_count;
 }
 
 /**

@@ -1492,6 +1492,7 @@
       <field name="roll_measured"  type="float" unit="rad"/>
       <field name="divergence"  type="float"/>
       <field name="true_divergence"  type="float"/>
+      <field name="dt"  type="float" unit="s"/>
     </message>
 
     <message name="ROTORCRAFT_NAV_STATUS" id="159">
