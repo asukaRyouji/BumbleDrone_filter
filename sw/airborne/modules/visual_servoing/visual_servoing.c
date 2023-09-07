@@ -63,11 +63,11 @@
 #endif
 
 #ifndef VS_OL_X_PGAIN
-#define VS_OL_X_PGAIN 12
+#define VS_OL_X_PGAIN 5
 #endif
 
 #ifndef VS_OL_Y_PGAIN
-#define VS_OL_Y_PGAIN 0.01
+#define VS_OL_Y_PGAIN 0.005
 #endif
 
 #ifndef VS_OL_Z_PGAIN
@@ -75,11 +75,11 @@
 #endif
 
 #ifndef VS_OL_X_DGAIN
-#define VS_OL_X_DGAIN 0.15
+#define VS_OL_X_DGAIN 0.1
 #endif
 
 #ifndef VS_OL_Y_DGAIN
-#define VS_OL_Y_DGAIN 0.007
+#define VS_OL_Y_DGAIN 0.003
 #endif
 
 #ifndef VS_OL_Z_DGAIN
@@ -99,15 +99,15 @@
 #endif
 
 #ifndef VS_LP_CONST
-#define VS_LP_CONST 0.9
+#define VS_LP_CONST 0.1
 #endif
 
 // define and initialise global variables
-float dt;
+float dt = 0.065;
 float measurement_time = 0;
 float m_dt;
-float pitch_sp;
-float roll_sp;
+float pitch_sp = 0;
+float roll_sp = 0;
 float vision_time, prev_vision_time;    // time stamp of the color object detector
 float color_count = 0;                // orange color count from color filter for obstacle detection
 float last_color_count = 1;
@@ -248,7 +248,11 @@ void visual_servoing_module_run(bool in_flight)
       new_divergence = divergence;
     } else {
       // new_divergence = pow(fabsf(color_count - last_color_count), 0.33) / (dt * visual_servoing.div_factor);
-      new_divergence = (color_count - last_color_count) / (dt * visual_servoing.div_factor * sqrt(color_count));
+      // new_divergence = (color_count - last_color_count) / (dt * visual_servoing.div_factor * sqrt(color_count));
+      float a1 = atan2f(sqrt(last_color_count), 2 * visual_servoing.div_factor);
+      float a2 = atan2f(sqrt(color_count), 2 * visual_servoing.div_factor);
+      float flow = (a2 - a1) / dt;
+      new_divergence = flow / (sqrt(color_count) / (2 * visual_servoing.div_factor));
     }
 
     true_divergence = speed->x / sqrt(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(1.5 + position->z, 2));
@@ -271,7 +275,7 @@ void visual_servoing_module_run(bool in_flight)
     // prev_m_time = m_time_s;
 
     // update control errors
-    visual_servoing.div_err = visual_servoing.divergence_sp - true_divergence;
+    visual_servoing.div_err = visual_servoing.divergence_sp - divergence;
     update_errors(true_centroid.x, box_centroid_y, visual_servoing.div_err, dt);
     last_color_count = color_count;
   }
@@ -285,7 +289,7 @@ void visual_servoing_module_run(bool in_flight)
 
   // desired accelerations inertial
   float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
-  float mu_y = 0; // -visual_servoing.ol_y_pgain * true_centroid.y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
+  float mu_y = -visual_servoing.ol_y_pgain * true_centroid.y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
   float mu_z = 9.81 + visual_servoing.ol_z_pgain * (position->z + 1.5);
 
   // set the desired thrust
