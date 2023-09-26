@@ -10,7 +10,9 @@
     },
     "files.associations": {
         "Makefile.*": "makefile",
-        "string": "c"
+        "string": "c",
+        "undistortion.h": "c",
+        "tensor": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "esbonio.sphinx.confDir": "",

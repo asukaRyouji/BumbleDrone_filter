@@ -32,18 +32,20 @@
 
 struct VisualServoing {
   float nominal_throttle;
-  float divergence_sp;          ///< agl = height from sonar (only used when using "fake" divergence)
-  float acc_y_sp;                 ///< low-pass version of agl
-  float acc_z_sp;               ///< low-pass filter constant
-  float ol_x_pgain;                    ///< vertical velocity as determined with sonar (only used when using "fake" divergence)
-  float ol_y_pgain;    ///< setpoint for constant divergence approach
-  float ol_z_pgain;                  ///< P-gain for constant divergence control (from divergence error to thrust)
-  float ol_x_dgain;                  ///< I-gain for constant divergence control
-  float ol_y_dgain;                  ///< D-gain for constant divergence control
-  float ol_z_dgain;             ///< Divergence estimate
-  float il_h_pgain;           ///< Previous divergence tracking error
-  float il_h_igain;                ///< integration of the error for I-gain
-  float il_h_dgain;                  ///< difference of error for the D-gain
+  float divergence_sp;
+  float divergence;
+  float true_divergence;          
+  float acc_y_sp;                 
+  float acc_z_sp;               
+  float ol_x_pgain;                    
+  float ol_y_pgain;   
+  float ol_z_pgain;                 
+  float ol_x_dgain;                 
+  float ol_y_dgain;               
+  float ol_z_dgain;             
+  float il_h_pgain;           
+  float il_h_igain;              
+  float il_h_dgain;                  
   float previous_box_x_err;
   float box_x_err_sum;
   float box_x_err_d;
@@ -56,6 +58,7 @@ struct VisualServoing {
   float div_err_d;
   float lp_const;
   float div_factor;
+  float switch_time_constant;
 };
 
 extern struct VisualServoing visual_servoing;

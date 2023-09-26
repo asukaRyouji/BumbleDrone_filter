@@ -28,8 +28,10 @@
 // Own header
 #include "modules/computer_vision/cv_detect_color_object.h"
 #include "modules/computer_vision/cv.h"
+#include "modules/computer_vision/lib/vision/undistortion.h"
 #include "modules/core/abi.h"
 #include "std.h"
+#include <sys/time.h>
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -76,6 +78,7 @@ struct color_object_t {
   int32_t y_c;
   uint32_t color_count;
   bool updated;
+  struct timeval ts;
 };
 struct color_object_t global_filters[2];
 
@@ -134,6 +137,7 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   global_filters[filter-1].x_c = x_c;
   global_filters[filter-1].y_c = y_c;
   global_filters[filter-1].updated = TRUE;
+  global_filters[filter-1].ts = img->ts;
   pthread_mutex_unlock(&mutex);
 
   return img;
@@ -216,10 +220,24 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
   uint32_t tot_y = 0;
   uint8_t *buffer = img->buf;
 
+  // undistort image
+  // float K[9] = {COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.focal_x, 0.0f, COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.center_x,
+  //               0.0f, COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.focal_y, COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.center_y,
+  //               0.0f, 0.0f, 1.0f
+  //              };
+  
+  // float k = COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.Dhane_k;
+
   // Go through all the pixels
   for (uint16_t y = 0; y < img->h; y++) {
     for (uint16_t x = 0; x < img->w; x ++) {
-      // Check if the color is inside the specified values
+      // undistort image
+      // float x_new;
+      // float y_new;
+      // bool success = distorted_pixels_to_normalized_coords((float)x, (float)y, &x_new, &y_new, k, K);
+      // // Check if the color is inside the specified values
+      // x = (uint16_t)x_new;
+      // y = (uint16_t)y_new;
       uint8_t *yp, *up, *vp;
       if (x % 2 == 0) {
         // Even x
@@ -241,7 +259,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
         tot_x += x;
         tot_y += y;
         if (draw){
-          *yp = 20;  // make pixel darker in image
+          *yp = 240;  // make pixel darker in image
         }
       }
     }
@@ -265,13 +283,13 @@ void color_object_detector_periodic(void)
 
   if(local_filters[0].updated){
     uint32_t now_ts = get_sys_time_usec();
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, now_ts, local_filters[0].x_c, local_filters[0].y_c,
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].ts, local_filters[0].x_c, local_filters[0].y_c,
         0, 0, local_filters[0].color_count, 0);
     local_filters[0].updated = false;
   }
   if(local_filters[1].updated){
     uint32_t now_ts = get_sys_time_usec();
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, now_ts, local_filters[1].x_c, local_filters[1].y_c,
+    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].ts, local_filters[1].x_c, local_filters[1].y_c,
         0, 0, local_filters[1].color_count, 1);
     local_filters[1].updated = false;
   }

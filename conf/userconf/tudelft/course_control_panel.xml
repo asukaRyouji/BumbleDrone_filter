@@ -56,7 +56,7 @@
     </session>
     <session name="Simulation - Gazebo + Joystick">
       <program name="Simulator">
-        <arg flag="-a" constant="@AIRCRAFT"/>
+        <arg flag="-a" constant="bebop_visual_servoing"/>
         <arg flag="-t" constant="nps"/>
       </program>
       <program name="Data Link">
@@ -76,9 +76,8 @@
         <arg flag="-zoom" constant="40."/>
       </program>
       <program name="Joystick">
-        <arg flag="-ac" constant="@AIRCRAFT"/>
-        <arg flag="turnigy_9xr.xml"/>
-        <arg flag="-d 1"/>
+        <arg flag="-ac" constant="turnigy_9xr.xml"/>
+        <arg flag="-d" constant="1"/>
       </program>
       <program name="Gazebo"/>
     </session>
@@ -91,16 +90,14 @@
         <arg flag="-speech"/>
       </program>
       <program name="Joystick">
-        <arg flag="-ac" constant="@AIRCRAFT"/>
-        <arg flag="turnigy_9xr.xml"/>
-        <arg flag="-d 1"/>
+        <arg flag="-ac" constant="turnigy_9xr.xml"/>
+        <arg flag="-d" constant="1"/>
       </program>
       <program name="NatNet3">
-        <arg flag="-ac 9999" constant="@AC_ID"/>
-        <arg flag="-o"/>
-        <arg flag="-xa" constant="57"/>
-        <arg flag="-an" constant="far"/>
-        <arg flag="-le" constant="far"/>
+        <arg flag="--long_edge" constant="right"/>
+        <arg flag="--x_side" constant="right"/>
+        <arg flag="--ac_nose" constant="right"/>
+        <arg flag="-ac" constant="45"/>
       </program>
     </session>
     <session name="Distance Counter">
@@ -130,6 +127,72 @@
       <program name="Gazebo"/>
       <program name="Messages"/>
       <program name="Real-time Plotter"/>
+    </session>
+    <session name="Flight Bebop">
+      <program name="Data Link">
+        <arg flag="-udp"/>
+      </program>
+      <program name="Server"/>
+      <program name="GCS">
+        <arg flag="-speech"/>
+      </program>
+      <program name="Joystick">
+        <arg flag="-ac" constant="turnigy_9xr.xml"/>
+        <arg flag="-d" constant="1"/>
+      </program>
+      <program name="NatNet3">
+        <arg flag="-ac" constant="9999"/>
+        <arg flag="-o"/>
+        <arg flag="-xa" constant="57"/>
+        <arg flag="-an" constant="far"/>
+        <arg flag="-le" constant="far"/>
+      </program>
+    </session>
+    <session name="visual_servoing">
+      <program name="Data Link">
+        <arg flag="-udp"/>
+      </program>
+      <program name="Server"/>
+      <program name="GCS">
+        <arg flag="-speech"/>
+      </program>
+      <program name="Joystick">
+        <arg flag="-ac" constant="turnigy_9xr.xml"/>
+        <arg flag="-d" constant="1"/>
+      </program>
+      <program name="NatNet3">
+        <arg flag="--long_edge" constant="right"/>
+        <arg flag="--x_side" constant="right"/>
+        <arg flag="--ac_nose" constant="right"/>
+        <arg flag="-ac" constant="45"/>
+      </program>
+    </session>
+    <session name="Simulation - Gazebo + Joystiek">
+      <program name="Simulator">
+        <arg flag="-a" constant="bebop_visual_servoing"/>
+        <arg flag="-t" constant="nps"/>
+      </program>
+      <program name="Data Link">
+        <arg flag="-udp"/>
+        <arg flag="-ping_period" constant="100"/>
+      </program>
+      <program name="Server">
+        <arg flag="-n"/>
+      </program>
+      <program name="GCS">
+        <arg flag="-speech"/>
+        <arg flag="-maximize"/>
+        <arg flag="-center_ac"/>
+        <arg flag="-mercator"/>
+        <arg flag="-maps_no_http"/>
+        <arg flag="-track_size" constant="200"/>
+        <arg flag="-zoom" constant="40."/>
+      </program>
+      <program name="Joystick">
+        <arg flag="-ac" constant="sm600.xml"/>
+        <arg flag="-d" constant="1"/>
+      </program>
+      <program name="Gazebo"/>
     </session>
   </section>
 </control_panel>

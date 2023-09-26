@@ -1493,6 +1493,8 @@
       <field name="divergence"  type="float"/>
       <field name="true_divergence"  type="float"/>
       <field name="dt"  type="float" unit="s"/>
+      <field name="box_centroid_x"  type="float" unit="pixel"/>
+      <field name="box_centroid_y"  type="float" unit="pixel"/>
     </message>
 
     <message name="ROTORCRAFT_NAV_STATUS" id="159">

@@ -55,15 +55,15 @@
 #endif
 
 #ifndef VS_DIVERGENCE_SP
-#define VS_DIVERGENCE_SP 0.05
+#define VS_DIVERGENCE_SP 0.1
 #endif
 
 #ifndef VS_DIV_FACTOR
-#define VS_DIV_FACTOR 1000
+#define VS_DIV_FACTOR 600
 #endif
 
 #ifndef VS_OL_X_PGAIN
-#define VS_OL_X_PGAIN 5
+#define VS_OL_X_PGAIN 0.1
 #endif
 
 #ifndef VS_OL_Y_PGAIN
@@ -71,11 +71,11 @@
 #endif
 
 #ifndef VS_OL_Z_PGAIN
-#define VS_OL_Z_PGAIN 1
+#define VS_OL_Z_PGAIN 0.01
 #endif
 
 #ifndef VS_OL_X_DGAIN
-#define VS_OL_X_DGAIN 0.1
+#define VS_OL_X_DGAIN 0.2
 #endif
 
 #ifndef VS_OL_Y_DGAIN
@@ -99,12 +99,17 @@
 #endif
 
 #ifndef VS_LP_CONST
-#define VS_LP_CONST 0.1
+#define VS_LP_CONST 0.05
+#endif
+
+#ifndef VS_SWITCH_TIME_CONSTANT
+#define VS_SWITCH_TIME_CONSTANT 0.01
 #endif
 
 // define and initialise global variables
 float dt = 0.065;
 float measurement_time = 0;
+float set_point_time = 0;
 float m_dt;
 float pitch_sp = 0;
 float roll_sp = 0;
@@ -112,8 +117,6 @@ float vision_time, prev_vision_time;    // time stamp of the color object detect
 float color_count = 0;                // orange color count from color filter for obstacle detection
 float last_color_count = 1;
 float new_divergence;
-float divergence = 0;
-float true_divergence = 0;
 float box_centroid_x = 0;
 float box_centroid_y = 0;
 int8_t set_point_count = 0;
@@ -126,9 +129,11 @@ static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev
                                 &roll_sp,
                                 &(attitude->theta),
                                 &(attitude->phi),
-                                &divergence,
-                                &true_divergence,
-                                &dt);
+                                &visual_servoing.divergence,
+                                &visual_servoing.true_divergence,
+                                &dt,
+                                &box_centroid_x,
+                                &box_centroid_y);
 }
 
 // This call back will be used to receive the color count from the orange detector
@@ -165,6 +170,8 @@ void visual_servoing_module_init(void)
 {
   visual_servoing.nominal_throttle = 0.68;
   visual_servoing.divergence_sp = VS_DIVERGENCE_SP;
+  visual_servoing.divergence = 0;
+  visual_servoing.true_divergence = 0;
   visual_servoing.acc_y_sp = 0;                 
   visual_servoing.div_factor = VS_DIV_FACTOR;              
   visual_servoing.ol_x_pgain = VS_OL_X_PGAIN;                    
@@ -187,6 +194,7 @@ void visual_servoing_module_init(void)
   visual_servoing.div_err_sum = 0;
   visual_servoing.div_err_d = 0;
   visual_servoing.lp_const = VS_LP_CONST;
+  visual_servoing.switch_time_constant = VS_SWITCH_TIME_CONSTANT;
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -200,8 +208,6 @@ static void reset_all_vars(void)
   roll_sp = 0;
   color_count = 0;                
   last_color_count = 1;
-  divergence = 0;
-  true_divergence = 0;
   box_centroid_x = 0;
   box_centroid_y = 0;
   set_point_count = 0;
@@ -236,8 +242,12 @@ void visual_servoing_module_run(bool in_flight)
 
   // check if new measurement received
   if (color_count != last_color_count) {
-    dt = vision_time - prev_vision_time;
-    prev_vision_time = vision_time;
+    float dt = timeval_diff(&(opticflow->prev_img_gray.ts), &(img->ts));
+    if (dt > 1e-5) {
+      result->fps = 1000.f / dt;
+    } else {
+      return false;
+    }
 
     Bound(visual_servoing.lp_const, 0.001f, 1.f);
     float lp_factor = dt / visual_servoing.lp_const;
@@ -245,7 +255,7 @@ void visual_servoing_module_run(bool in_flight)
 
     // Compute divergence
     if (dt > 0.1) {
-      new_divergence = divergence;
+      new_divergence = visual_servoing.divergence;
     } else {
       // new_divergence = pow(fabsf(color_count - last_color_count), 0.33) / (dt * visual_servoing.div_factor);
       // new_divergence = (color_count - last_color_count) / (dt * visual_servoing.div_factor * sqrt(color_count));
@@ -255,17 +265,17 @@ void visual_servoing_module_run(bool in_flight)
       new_divergence = flow / (sqrt(color_count) / (2 * visual_servoing.div_factor));
     }
 
-    true_divergence = speed->x / sqrt(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(1.5 + position->z, 2));
+    visual_servoing.true_divergence = speed->x / sqrt(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(1.5 + position->z, 2));
 
     // deal with (unlikely) fast changes in divergence:
     static const float max_div_dt = 0.10f;
-    if (fabsf(new_divergence - divergence) > max_div_dt) {
-      if (new_divergence < divergence) { new_divergence = divergence - max_div_dt; }
-      else { new_divergence = divergence + max_div_dt; }
+    if (fabsf(new_divergence - visual_servoing.divergence) > max_div_dt) {
+      if (new_divergence < visual_servoing.divergence) { new_divergence = visual_servoing.divergence - max_div_dt; }
+      else { new_divergence = visual_servoing.divergence + max_div_dt; }
     }
 
     // low-pass filter the divergence:
-    divergence += (new_divergence - divergence) * lp_factor;
+    visual_servoing.divergence += (new_divergence - visual_servoing.divergence) * lp_factor;
 
     // uint32_t m_time = get_sys_time_usec();
     // float m_time_s = ((float)m_time) / 1e6;
@@ -275,22 +285,44 @@ void visual_servoing_module_run(bool in_flight)
     // prev_m_time = m_time_s;
 
     // update control errors
-    visual_servoing.div_err = visual_servoing.divergence_sp - divergence;
+    visual_servoing.div_err = visual_servoing.divergence_sp - visual_servoing.divergence;
+    float current_time = get_sys_time_usec();
+    float time_after_switch = (current_time - set_point_time) / 1e6;
+    // VERBOSE_PRINT("time after switch: %f", time_after_switch);
+    if (time_after_switch < 6) {
+      visual_servoing.lp_const += visual_servoing.switch_time_constant * time_after_switch;
+    }
+
     update_errors(true_centroid.x, box_centroid_y, visual_servoing.div_err, dt);
     last_color_count = color_count;
   }
 
   // change divergence set-point
-  if (color_count > 200000 && set_point_count == 0) {
-    visual_servoing.divergence_sp = 0.15;
+  if (color_count > 100 && set_point_count == 0) {
+    visual_servoing.lp_const = 0.1;
+    set_point_time = get_sys_time_usec();
     set_point_count += 1;
-    VERBOSE_PRINT("divergence set to: %f", 0.15);
+    VERBOSE_PRINT("divergence set to: %f", 0.1);
   }
-
+  if (color_count > 50000 && set_point_count == 3) {
+    visual_servoing.divergence_sp = 0.15;
+    visual_servoing.lp_const = 0.1;
+    set_point_time = get_sys_time_usec();
+    set_point_count += 1;
+    VERBOSE_PRINT("divergence set to: %f", 0.2);
+  }
+  if (color_count > 100000 && set_point_count == 3) {
+    visual_servoing.divergence_sp = 0.2;
+    visual_servoing.lp_const = 0.1;
+    set_point_time = get_sys_time_usec();
+    set_point_count += 1;
+    VERBOSE_PRINT("divergence set to: %f", 0.3);
+  }
+  // visual_servoing.ol_x_pgain * (1 - position->x)
   // desired accelerations inertial
-  float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
+  float mu_x = 0; // - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
   float mu_y = -visual_servoing.ol_y_pgain * true_centroid.y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
-  float mu_z = 9.81 + visual_servoing.ol_z_pgain * (position->z + 1.5);
+  float mu_z = 9.81 + visual_servoing.ol_z_pgain * box_centroid_x;
 
   // set the desired thrust
   float mass = (visual_servoing.nominal_throttle * MAX_PPRZ) / 9.81;
@@ -342,7 +374,7 @@ void update_errors(float box_x_err, float box_y_err, float div_err, float dt)
 
   // Error of divergence
   visual_servoing.div_err_sum += div_err;
-  visual_servoing.div_err_d = (((div_err - visual_servoing.previous_div_err) / dt) - visual_servoing.div_err_d) * lp_factor;
+  visual_servoing.div_err_d += (((div_err - visual_servoing.previous_div_err) / dt) - visual_servoing.div_err_d) * lp_factor;
   visual_servoing.previous_div_err = div_err;
 }
 

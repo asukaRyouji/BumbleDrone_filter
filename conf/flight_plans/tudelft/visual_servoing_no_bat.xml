@@ -10,11 +10,11 @@
     #define NPS_GAZEBO_WORLD "cyberzoo2019_orange_box.world"
 #include "autopilot.h"
 inline void setNav(void){
-  autopilot_mode_auto2 = AP_MODE_NAV;
+  <!-- autopilot_mode_auto2 = AP_MODE_NAV; -->
   autopilot_static_set_mode(AP_MODE_NAV);
 }
 inline void setModule(void){
-  autopilot_mode_auto2 = AP_MODE_MODULE;
+  <!-- autopilot_mode_auto2 = AP_MODE_MODULE; -->
   autopilot_static_set_mode(AP_MODE_MODULE);
 }
 </header>
@@ -56,50 +56,16 @@ inline void setModule(void){
     <variable var="init_y" init="0" type="int32_t" min="-5." max="5." step="0.1"/>
   </variables>
   <exceptions>
-    <!-- RC lost -->
-    <!--exception cond="((radio_control.status == RC_REALLY_LOST) @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      !(nav_block >= IndexOfBlock('land here')) @AND
-      (autopilot_in_flight() == true) )" deroute="Standby"/-->
-    <!-- Datalink lost (constant RPM descent) -->
-    <exception cond="((datalink_time @GT 5) @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      !(nav_block >= IndexOfBlock('land here')) @AND
-      (autopilot_in_flight() == true) )" deroute="land here"/>
-    <!-- Geofencing XY -->
-    <exception cond="(!InsideCyberZoo(GetPosX(), GetPosY()) @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      !(nav_block >= IndexOfBlock('land here')) @AND
-      (autopilot_in_flight() == true) )" deroute="land here"/>
-    <!-- Geofencing Z 2.5 -->
-    <exception cond="((GetPosAlt() @GT 3.5) @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      !(nav_block >= IndexOfBlock('land here')) @AND
-      (autopilot_in_flight() == true) )" deroute="land here"/>
-    <!-- Geofencing Z 4.5 (constant RPM descent)-->
-    <exception cond="((GetPosAlt() @GT 4.5) @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      (autopilot_in_flight() == true) )" deroute="Landed"/>
-    <!-- Bat low -->
-    <exception cond="(electrical.bat_low @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      !(nav_block >= IndexOfBlock('land here')) @AND
-      (autopilot_in_flight() == true) )" deroute="land here"/>
-    <!-- Bat critical (constant RPM no stabilization)-->
-    <exception cond="(electrical.bat_critical @AND
-      !(IndexOfBlock('Holding point') @GT nav_block) @AND
-      !(nav_block >= IndexOfBlock('land here')) @AND
-      (autopilot_in_flight() == true) )" deroute="land here"/>
   </exceptions>
   <blocks>
-    <block name="Wait GPS">
+    <!-- <block name="Wait GPS">
       <call_once fun="NavKillThrottle()"/>
       <while cond="!GpsFixValid()"/>
     </block>
     <block name="Geo init">
       <while cond="LessThan(NavBlockTime(), 2)"/>
       <call_once fun="NavSetAltitudeReferenceHere()"/>
-    </block>
+    </block> -->
     <block name="Holding point">
       <call_once fun="NavKillThrottle()"/>
       <attitude pitch="0" roll="0" throttle="0" until="FALSE" vmode="throttle"/>
