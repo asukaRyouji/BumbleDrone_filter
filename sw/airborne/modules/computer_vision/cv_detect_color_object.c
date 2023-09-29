@@ -78,7 +78,8 @@ struct color_object_t {
   int32_t y_c;
   uint32_t color_count;
   bool updated;
-  struct timeval ts;
+  uint32_t ts;
+  // struct timeval ts;
 };
 struct color_object_t global_filters[2];
 
@@ -131,13 +132,14 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   // VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   // VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
   //       hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
+  uint32_t time_stamp = img->ts.tv_sec + img->ts.tv_usec;
 
   pthread_mutex_lock(&mutex);
   global_filters[filter-1].color_count = count;
   global_filters[filter-1].x_c = x_c;
   global_filters[filter-1].y_c = y_c;
   global_filters[filter-1].updated = TRUE;
-  global_filters[filter-1].ts = img->ts;
+  global_filters[filter-1].ts = time_stamp;
   pthread_mutex_unlock(&mutex);
 
   return img;
@@ -259,7 +261,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
         tot_x += x;
         tot_y += y;
         if (draw){
-          *yp = 240;  // make pixel darker in image
+          *yp = 240;  // make brighter in image
         }
       }
     }
@@ -271,6 +273,11 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     *p_xc = 0;
     *p_yc = 0;
   }
+  int size_crosshair = 10;
+  uint8_t blue_color[4] = {0, 128, 0, 128};
+  struct point_t loc = { .x = *p_xc, .y = *p_yc };
+  image_draw_crosshair(img, &loc, blue_color, size_crosshair);
+
   return cnt;
 }
 
@@ -282,13 +289,11 @@ void color_object_detector_periodic(void)
   pthread_mutex_unlock(&mutex);
 
   if(local_filters[0].updated){
-    uint32_t now_ts = get_sys_time_usec();
     AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].ts, local_filters[0].x_c, local_filters[0].y_c,
         0, 0, local_filters[0].color_count, 0);
     local_filters[0].updated = false;
   }
   if(local_filters[1].updated){
-    uint32_t now_ts = get_sys_time_usec();
     AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].ts, local_filters[1].x_c, local_filters[1].y_c,
         0, 0, local_filters[1].color_count, 1);
     local_filters[1].updated = false;

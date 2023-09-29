@@ -22,7 +22,7 @@ inline void setModule(void){
     <waypoint lat="51.990634" lon="4.376789" name="HOME"/>
     <waypoint name="INIT0" x="0.0" y="0.0"/>
     <waypoint name="INIT2" x="0.0" y="2.0"/>
-    <waypoint name="INIT-2" x="0.0" y="-2.0"/>
+    <waypoint name="INIT-2" x="2.0" y="-2.0"/>
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
     <waypoint name="STDBY" x="1.9" y="1.0"/>
     <waypoint name="TD" x="0.8" y="-1.7"/>

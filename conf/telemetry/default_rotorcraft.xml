@@ -38,6 +38,7 @@
       <message name="WIND_INFO_RET"            period="1."/>
       <message name="AHRS_REF_QUAT"            period="0.5"/>
       <message name="VISUAL_SERVOING"          period="0.02"/>
+      <message name="ROTORCRAFT_CMD"           period="0.02"/>
     </mode>
 
     <mode name="ppm">

@@ -1486,15 +1486,14 @@
     </message>
 
     <message name="VISUAL_SERVOING" id="158">
-      <field name="pitch_sp"  type="float" unit="rad"/>
-      <field name="roll_sp"  type="float" unit="rad"/>
       <field name="pitch_measured"  type="float" unit="rad"/>
       <field name="roll_measured"  type="float" unit="rad"/>
       <field name="divergence"  type="float"/>
       <field name="true_divergence"  type="float"/>
-      <field name="dt"  type="float" unit="s"/>
+      <field name="fps"  type="float" unit="1/s"/>
       <field name="box_centroid_x"  type="float" unit="pixel"/>
       <field name="box_centroid_y"  type="float" unit="pixel"/>
+      <field name="distance_est"  type="float" unit="m"/>
     </message>
 
     <message name="ROTORCRAFT_NAV_STATUS" id="159">

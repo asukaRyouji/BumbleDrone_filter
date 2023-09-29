@@ -33,7 +33,7 @@
   <section name="sessions">
     <session name="Simulation - Gazebo">
       <program name="Simulator">
-        <arg flag="-a" constant="@AIRCRAFT"/>
+        <arg flag="-a" constant="bebop_visual_servoing"/>
         <arg flag="-t" constant="nps"/>
       </program>
       <program name="Data Link">
@@ -53,6 +53,8 @@
         <arg flag="-zoom" constant="40."/>
       </program>
       <program name="Gazebo"/>
+      <program name="Messages"/>
+      <program name="Real-time Plotter"/>
     </session>
     <session name="Simulation - Gazebo + Joystick">
       <program name="Simulator">
@@ -80,6 +82,8 @@
         <arg flag="-d" constant="1"/>
       </program>
       <program name="Gazebo"/>
+      <program name="Messages"/>
+      <program name="Real-time Plotter"/>
     </session>
     <session name="Flight UDP">
       <program name="Data Link">
@@ -141,12 +145,14 @@
         <arg flag="-d" constant="1"/>
       </program>
       <program name="NatNet3">
-        <arg flag="-ac" constant="9999"/>
-        <arg flag="-o"/>
-        <arg flag="-xa" constant="57"/>
-        <arg flag="-an" constant="far"/>
-        <arg flag="-le" constant="far"/>
+        <arg flag="--long_edge" constant="right"/>
+        <arg flag="--x_angle_from_right"/>
+        <arg flag="-23.0"/>
+        <arg flag="--ac_nose" constant="right"/>
+        <arg flag="-ac" constant="45"/>
       </program>
+      <program name="Messages"/>
+      <program name="Real-time Plotter"/>
     </session>
     <session name="visual_servoing">
       <program name="Data Link">
