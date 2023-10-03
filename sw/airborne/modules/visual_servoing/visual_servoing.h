@@ -29,6 +29,7 @@
 #define VISUAL_SERVOING_H
 
 #include <std.h>
+#include "filters/low_pass_filter.h"
 
 struct VisualServoing {
   float nominal_throttle;
@@ -59,6 +60,7 @@ struct VisualServoing {
   float lp_const;
   float div_factor;
   float switch_time_constant;
+  Butterworth2LowPass lpf;
 };
 
 extern struct VisualServoing visual_servoing;

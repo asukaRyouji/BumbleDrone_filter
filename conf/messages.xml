@@ -1494,6 +1494,7 @@
       <field name="box_centroid_x"  type="float" unit="pixel"/>
       <field name="box_centroid_y"  type="float" unit="pixel"/>
       <field name="distance_est"  type="float" unit="m"/>
+      <field name="color_count"  type="float"/>
     </message>
 
     <message name="ROTORCRAFT_NAV_STATUS" id="159">

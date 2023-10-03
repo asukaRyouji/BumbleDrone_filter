@@ -151,11 +151,11 @@ struct image_t *object_detector1(struct image_t *img, uint8_t camera_id __attrib
   return object_detector(img, 1);
 }
 
-struct image_t *object_detector2(struct image_t *img, uint8_t camera_id);
-struct image_t *object_detector2(struct image_t *img, uint8_t camera_id __attribute__((unused)))
-{
-  return object_detector(img, 2);
-}
+// struct image_t *object_detector2(struct image_t *img, uint8_t camera_id);
+// struct image_t *object_detector2(struct image_t *img, uint8_t camera_id __attribute__((unused)))
+// {
+//   return object_detector(img, 2);
+// }
 
 void color_object_detector_init(void)
 {
@@ -177,21 +177,21 @@ void color_object_detector_init(void)
   cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA1, object_detector1, COLOR_OBJECT_DETECTOR_FPS1, 0);
 #endif
 
-#ifdef COLOR_OBJECT_DETECTOR_CAMERA2
-#ifdef COLOR_OBJECT_DETECTOR_LUM_MIN2
-  cod_lum_min2 = COLOR_OBJECT_DETECTOR_LUM_MIN2;
-  cod_lum_max2 = COLOR_OBJECT_DETECTOR_LUM_MAX2;
-  cod_cb_min2 = COLOR_OBJECT_DETECTOR_CB_MIN2;
-  cod_cb_max2 = COLOR_OBJECT_DETECTOR_CB_MAX2;
-  cod_cr_min2 = COLOR_OBJECT_DETECTOR_CR_MIN2;
-  cod_cr_max2 = COLOR_OBJECT_DETECTOR_CR_MAX2;
-#endif
-#ifdef COLOR_OBJECT_DETECTOR_DRAW2
-  cod_draw2 = COLOR_OBJECT_DETECTOR_DRAW2;
-#endif
+// #ifdef COLOR_OBJECT_DETECTOR_CAMERA2
+// #ifdef COLOR_OBJECT_DETECTOR_LUM_MIN2
+//   cod_lum_min2 = COLOR_OBJECT_DETECTOR_LUM_MIN2;
+//   cod_lum_max2 = COLOR_OBJECT_DETECTOR_LUM_MAX2;
+//   cod_cb_min2 = COLOR_OBJECT_DETECTOR_CB_MIN2;
+//   cod_cb_max2 = COLOR_OBJECT_DETECTOR_CB_MAX2;
+//   cod_cr_min2 = COLOR_OBJECT_DETECTOR_CR_MIN2;
+//   cod_cr_max2 = COLOR_OBJECT_DETECTOR_CR_MAX2;
+// #endif
+// #ifdef COLOR_OBJECT_DETECTOR_DRAW2
+//   cod_draw2 = COLOR_OBJECT_DETECTOR_DRAW2;
+// #endif
 
-  cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA2, object_detector2, COLOR_OBJECT_DETECTOR_FPS2, 1);
-#endif
+//   cv_add_to_device(&COLOR_OBJECT_DETECTOR_CAMERA2, object_detector2, COLOR_OBJECT_DETECTOR_FPS2, 1);
+// #endif
 }
 
 /*
@@ -267,16 +267,23 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     }
   }
   if (cnt > 0) {
+    int size_crosshair = 10;
+    uint8_t blue_color[4] = {0, 128, 0, 128};
+    uint32_t p_xc_norm = (uint32_t)roundf(tot_x / ((float) cnt));
+    uint32_t p_yc_norm = (uint32_t)roundf(tot_y / ((float) cnt));
+
+    struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
+    uint32_t xc_derotated = (uint32_t)roundf(p_xc_norm + COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.focal_x * tanf(attitude->theta));
+    // printf("theta: %f \n", img->eulers.theta); 
+
+    struct point_t loc = { .x = p_xc_norm, .y = p_yc_norm };
+    image_draw_crosshair(img, &loc, blue_color, size_crosshair);
     *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - img->w * 0.5f);
     *p_yc = (int32_t)roundf(img->h * 0.5f - tot_y / ((float) cnt));
   } else {
     *p_xc = 0;
     *p_yc = 0;
   }
-  int size_crosshair = 10;
-  uint8_t blue_color[4] = {0, 128, 0, 128};
-  struct point_t loc = { .x = *p_xc, .y = *p_yc };
-  image_draw_crosshair(img, &loc, blue_color, size_crosshair);
 
   return cnt;
 }
@@ -293,9 +300,9 @@ void color_object_detector_periodic(void)
         0, 0, local_filters[0].color_count, 0);
     local_filters[0].updated = false;
   }
-  if(local_filters[1].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].ts, local_filters[1].x_c, local_filters[1].y_c,
-        0, 0, local_filters[1].color_count, 1);
-    local_filters[1].updated = false;
-  }
+  // if(local_filters[1].updated){
+  //   AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].ts, local_filters[1].x_c, local_filters[1].y_c,
+  //       0, 0, local_filters[1].color_count, 1);
+  //   local_filters[1].updated = false;
+  // }
 }
