@@ -35,18 +35,14 @@ struct VisualServoing {
   float nominal_throttle;
   float divergence_sp;
   float divergence;
-  float true_divergence;          
-  float acc_y_sp;                 
-  float acc_z_sp;               
+  float true_divergence;
+  uint32_t window_size;                       
   float ol_x_pgain;                    
   float ol_y_pgain;   
   float ol_z_pgain;                 
   float ol_x_dgain;                 
   float ol_y_dgain;               
-  float ol_z_dgain;             
-  float il_h_pgain;           
-  float il_h_igain;              
-  float il_h_dgain;                  
+  float ol_z_dgain;                             
   float previous_box_x_err;
   float box_x_err_sum;
   float box_x_err_d;
@@ -60,6 +56,8 @@ struct VisualServoing {
   float lp_const;
   float div_factor;
   float switch_time_constant;
+  float distance_accuracy;
+  float distance_est_threshold;
   Butterworth2LowPass lpf;
 };
 

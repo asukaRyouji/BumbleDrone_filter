@@ -39,6 +39,7 @@
       <message name="AHRS_REF_QUAT"            period="0.5"/>
       <message name="VISUAL_SERVOING"          period="0.02"/>
       <message name="ROTORCRAFT_CMD"           period="0.02"/>
+      <message name="AHRS_GYRO_BIAS_INT"       period="1."/>
     </mode>
 
     <mode name="ppm">

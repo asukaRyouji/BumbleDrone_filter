@@ -55,6 +55,7 @@
       <program name="Gazebo"/>
       <program name="Messages"/>
       <program name="Real-time Plotter"/>
+      <program name="Real-time Plotter"/>
     </session>
     <session name="Simulation - Gazebo + Joystick">
       <program name="Simulator">

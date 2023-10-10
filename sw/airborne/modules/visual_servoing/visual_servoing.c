@@ -26,6 +26,8 @@
  */
 
 #include <math.h>
+#include "math/pprz_stat.h"
+#include "math/pprz_algebra_float.h"
 #include "modules/visual_servoing/visual_servoing.h"
 #include "autopilot.h"
 #include "firmwares/rotorcraft/guidance/guidance_h.h"
@@ -33,7 +35,6 @@
 #include "firmwares/rotorcraft/stabilization.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_attitude.h"
 #include "firmwares/rotorcraft/stabilization/stabilization_indi_simple.h"
-#include "math/pprz_algebra_float.h"
 #include "generated/airframe.h"
 #include "state.h"
 #include "modules/core/abi.h"
@@ -55,7 +56,7 @@
 #endif
 
 #ifndef VS_DIVERGENCE_SP
-#define VS_DIVERGENCE_SP 0.05
+#define VS_DIVERGENCE_SP 0.15
 #endif
 
 #ifndef VS_DIV_FACTOR
@@ -67,51 +68,54 @@
 #endif
 
 #ifndef VS_OL_Y_PGAIN
-#define VS_OL_Y_PGAIN 2.4
+#define VS_OL_Y_PGAIN 0.01
 #endif
 
 #ifndef VS_OL_Z_PGAIN
-#define VS_OL_Z_PGAIN 0.5
+#define VS_OL_Z_PGAIN 0.01
 #endif
 
 #ifndef VS_OL_X_DGAIN
-#define VS_OL_X_DGAIN 0.2
+#define VS_OL_X_DGAIN 0.1
 #endif
 
 #ifndef VS_OL_Y_DGAIN
-#define VS_OL_Y_DGAIN 1.2
+#define VS_OL_Y_DGAIN 0.002
 #endif
 
 #ifndef VS_OL_Z_DGAIN
-#define VS_OL_Z_DGAIN 0
-#endif
-
-#ifndef VS_IL_H_PGAIN
-#define VS_IL_H_PGAIN 0.9
-#endif
-
-#ifndef VS_IL_H_IGAIN
-#define VS_IL_H_IGAIN 0.005
-#endif
-
-#ifndef VS_IL_H_DGAIN
-#define VS_IL_H_DGAIN 0
+#define VS_OL_Z_DGAIN 0.002
 #endif
 
 #ifndef VS_LP_CONST
 #define VS_LP_CONST 0.3
 #endif
 
+#ifndef VS_WINDOW_SIZE
+#define VS_WINDOW_SIZE 20
+#endif
+
 #ifndef VS_SWITCH_TIME_CONSTANT
 #define VS_SWITCH_TIME_CONSTANT 0.01
 #endif
+
+#ifndef VS_DISTANCE_EST_THRESHOLD
+#define VS_DISTANCE_EST_THRESHOLD 0.07
+#endif
+
 
 // define and initialise global variables
 float vs_dt = 0.065;
 float fps = 0;
 float divergence_sp = 0;
+float divergence_history[VS_WINDOW_SIZE];
+float theta_history[VS_WINDOW_SIZE];
+float divergence_variance = 0;
+float divergence_mean = 0;
+float set_point_error = 0;
+uint32_t index_hist = 0;
+bool history_array_filled = FALSE;
 float distance_est = 0;
-float measurement_time = 0;
 float set_point_time = 0;
 float m_dt;
 float pitch_sp = 0;
@@ -137,7 +141,10 @@ static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev
                                 &box_centroid_x,
                                 &box_centroid_y,
                                 &distance_est,
-                                &true_distance);
+                                &true_distance,
+                                &divergence_variance,
+                                &set_point_error,
+                                &divergence_mean);
 }
 
 // This call back will be used to receive the color count from the orange detector
@@ -162,6 +169,8 @@ struct VisualServoing visual_servoing;
 
 void visual_servoing_module_init(void);
 
+void visual_servoing_module_enter(void);
+
 void visual_servoing_module_run(bool in_flight);
 
 static void update_errors(float box_x_err, float box_y_err, float div_err, float vs_dt);
@@ -175,20 +184,17 @@ static void vs_init_filters(void);
 void visual_servoing_module_init(void)
 {
   visual_servoing.nominal_throttle = (float)guidance_v_nominal_throttle;
-  visual_servoing.divergence_sp = VS_DIVERGENCE_SP;
+  visual_servoing.divergence_sp = 0;
   visual_servoing.divergence = 0;
   visual_servoing.true_divergence = 0;
-  visual_servoing.acc_y_sp = 0;                 
+  visual_servoing.window_size = VS_WINDOW_SIZE;                
   visual_servoing.div_factor = VS_DIV_FACTOR;              
   visual_servoing.ol_x_pgain = VS_OL_X_PGAIN;                    
-  visual_servoing.ol_y_pgain = VS_OL_Y_PGAIN / VISUAL_SERVOING_CAMERA.output_size.w;    
-  visual_servoing.ol_z_pgain = VS_OL_Z_PGAIN / VISUAL_SERVOING_CAMERA.output_size.h;                  
+  visual_servoing.ol_y_pgain = VS_OL_Y_PGAIN; // / VISUAL_SERVOING_CAMERA.output_size.w;    
+  visual_servoing.ol_z_pgain = VS_OL_Z_PGAIN; // / VISUAL_SERVOING_CAMERA.output_size.h;                  
   visual_servoing.ol_x_dgain = VS_OL_X_DGAIN;                  
-  visual_servoing.ol_y_dgain = VS_OL_Y_DGAIN / VISUAL_SERVOING_CAMERA.output_size.w;                  
+  visual_servoing.ol_y_dgain = VS_OL_Y_DGAIN; // / VISUAL_SERVOING_CAMERA.output_size.w;                  
   visual_servoing.ol_z_dgain = VS_OL_Z_DGAIN;             
-  visual_servoing.il_h_pgain = VS_IL_H_PGAIN;           
-  visual_servoing.il_h_igain = VS_IL_H_IGAIN;
-  visual_servoing.il_h_dgain = VS_IL_H_DGAIN;
   visual_servoing.previous_box_x_err = 0;
   visual_servoing.box_x_err_sum = 0;
   visual_servoing.box_x_err_d = 0;
@@ -201,6 +207,7 @@ void visual_servoing_module_init(void)
   visual_servoing.div_err_d = 0;
   visual_servoing.lp_const = VS_LP_CONST;
   visual_servoing.switch_time_constant = VS_SWITCH_TIME_CONSTANT;
+  visual_servoing.distance_est_threshold = VS_DISTANCE_EST_THRESHOLD;
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -221,6 +228,19 @@ void vs_init_filters(void)
 
 static void reset_all_vars(void)
 {
+  visual_servoing.nominal_throttle = (float)guidance_v_nominal_throttle;
+  visual_servoing.divergence = 0;
+  visual_servoing.true_divergence = 0;
+  visual_servoing.previous_box_x_err = 0;
+  visual_servoing.box_x_err_sum = 0;
+  visual_servoing.box_x_err_d = 0;
+  visual_servoing.previous_box_y_err = 0;
+  visual_servoing.box_y_err_sum = 0;
+  visual_servoing.box_y_err_d = 0;
+  visual_servoing.div_err = 0;
+  visual_servoing.previous_div_err = 0;
+  visual_servoing.div_err_sum = 0;
+  visual_servoing.div_err_d = 0;
   pitch_sp = 0;
   roll_sp = 0;
   color_count = 0;                
@@ -230,22 +250,20 @@ static void reset_all_vars(void)
   set_point_count = 0;
   set_point_time = get_sys_time_usec();
   divergence_sp = 0;
+  uint32_t i;
+  for (i = 0; i < VS_WINDOW_SIZE; i++) {
+    theta_history[i] = 0;
+    divergence_history[i] = 0;
+  }
   vs_init_filters();
 }
 
 
 void visual_servoing_module_run(bool in_flight)
 { 
-  // // Vision update fps
-  // if (color_count != last_color_count) {
-  //   uint32_t new_measurement_time = get_sys_time_usec();
-  //   m_dt = (float)new_measurement_time / 1e6 - measurement_time;
-  //   measurement_time = (float)new_measurement_time / 1e6;
-  //   VERBOSE_PRINT("dt: %f", m_dt);
-  // }
-
-  // move x, y
+  // Get the current state of the quadrotor
   struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
+  // attitude->theta += -0.05;
   struct NedCoor_f *position = stateGetPositionNed_f();
   struct NedCoor_f *speed = stateGetSpeedNed_f();
 
@@ -260,11 +278,10 @@ void visual_servoing_module_run(bool in_flight)
   // true_centroid.x = -true_centroid.z;
   // true_centroid.y = -true_centroid.y;
 
-
-  // check if new measurement received
   vs_dt = vision_time - prev_vision_time;
   prev_vision_time = vision_time;
   
+  // check if new measurement received
   if (vs_dt > 1e-5){
     fps = 1/vs_dt;
     Bound(visual_servoing.lp_const, 0.001f, 1.f);
@@ -272,8 +289,6 @@ void visual_servoing_module_run(bool in_flight)
     Bound(lp_factor, 0.f, 1.f);
 
     // Compute divergence
-    // new_divergence = pow(fabsf(color_count - last_color_count), 0.33) / (dt * visual_servoing.div_factor);
-    // new_divergence = (color_count - last_color_count) / (dt * visual_servoing.div_factor * sqrt(color_count));
     if (last_color_count && color_count != 0){
       float a1 = atan2f(sqrt(last_color_count), 2 * visual_servoing.div_factor);
       float a2 = atan2f(sqrt(color_count), 2 * visual_servoing.div_factor);
@@ -281,10 +296,6 @@ void visual_servoing_module_run(bool in_flight)
       new_divergence = flow / (sqrt(color_count) / (2 * visual_servoing.div_factor));
     }
     else {new_divergence = visual_servoing.divergence;}
-
-    true_distance = sqrt(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(1.5 + position->z, 2));
-
-    visual_servoing.true_divergence = speed->x / true_distance;
 
     // deal with (unlikely) fast changes in divergence:
     static const float max_div_dt = 0.20f;
@@ -297,18 +308,10 @@ void visual_servoing_module_run(bool in_flight)
     // visual_servoing.divergence = update_butterworth_2_low_pass(&visual_servoing.lpf, new_divergence);
     visual_servoing.divergence += (new_divergence - visual_servoing.divergence) * lp_factor;
 
-    // Distance Estimate
-    if (visual_servoing.divergence != 0){
-      distance_est = roundf((-17.2*attitude->theta * pow(visual_servoing.divergence, -0.808)) * 100) / 100;
-    }
+    // Ground truth divergence
+    true_distance = sqrt(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(1.5 + position->z, 2));
+    visual_servoing.true_divergence = speed->x / true_distance;
 
-    // uint32_t m_time = get_sys_time_usec();
-    // float m_time_s = ((float)m_time) / 1e6;
-    // float fps = 1/(m_time_s - prev_m_time);
-
-    // prev_m_time = m_time_s;
-
-    // update control errors
     // 2 [1/s] ramp to setpoint
     if (fabsf(visual_servoing.divergence_sp - divergence_sp) > 2.*vs_dt){
       divergence_sp += 2*vs_dt * visual_servoing.divergence_sp / fabsf(visual_servoing.divergence_sp);
@@ -318,23 +321,48 @@ void visual_servoing_module_run(bool in_flight)
 
     visual_servoing.div_err = divergence_sp - visual_servoing.divergence;
 
-    // float current_time = get_sys_time_usec();
-    // float time_after_switch = (current_time - set_point_time) / 1e6;
-    // // VERBOSE_PRINT("time after switch: %f", time_after_switch);
-    // if (time_after_switch < 6) {
-    //   visual_servoing.lp_const += visual_servoing.switch_time_constant * time_after_switch;
-    // }
 
+    // Distance Estimate
+    // Compute mean and variance of divergence and pitch angle
+    divergence_history[index_hist] = visual_servoing.divergence;
+    theta_history[index_hist] = attitude->theta;
+    divergence_variance = variance_f(divergence_history, visual_servoing.window_size); // below 0.001 is good enough
+    divergence_mean = mean_f(divergence_history, visual_servoing.window_size);
+    float theta_mean = mean_f(theta_history, visual_servoing.window_size);
+
+    // Accuracy of the distance estimate
+    set_point_error = fabsf(visual_servoing.divergence_sp - divergence_mean); // below 0.04 is good enough
+    visual_servoing.distance_accuracy = set_point_error + 40 * divergence_variance;
+
+    // Compute distance estimate
+    if (history_array_filled && visual_servoing.distance_accuracy < visual_servoing.distance_est_threshold){
+      distance_est = roundf((-17.2*theta_mean * pow(divergence_mean, -0.808)) * 100) / 100;
+    }
+    else {distance_est = 0;}
+
+    if (index_hist + 1 == visual_servoing.window_size) {
+      history_array_filled = TRUE;
+    }
+
+    index_hist = (index_hist + 1) % visual_servoing.window_size;
+
+    // update control errors
     update_errors(box_centroid_x, box_centroid_y, visual_servoing.div_err, vs_dt);
   }
 
   // change divergence set-point
-  if (color_count > 100 && set_point_count == 0) {
-    visual_servoing.divergence_sp = 0.1;
-    visual_servoing.lp_const = VS_LP_CONST;
+  if (distance_est > 0 && set_point_count == 3) {
+    float new_sp = 0.25;
+    visual_servoing.divergence_sp = new_sp;
     set_point_time = get_sys_time_usec();
+    uint32_t j;
+    for (j = 0; j < VS_WINDOW_SIZE; j++) {
+      theta_history[j] = 0;
+      divergence_history[j] = 0;
+      index_hist = 0;
+    }
     set_point_count += 1;
-    VERBOSE_PRINT("divergence set to: %f", 0.1);
+    VERBOSE_PRINT("divergence set to: %f", new_sp);
   }
   if (color_count > 20000 && set_point_count == 3) {
     visual_servoing.divergence_sp = 0.15;
@@ -350,15 +378,17 @@ void visual_servoing_module_run(bool in_flight)
     set_point_count += 1;
     VERBOSE_PRINT("divergence set to: %f", 0.3);
   }
+
   // visual_servoing.ol_x_pgain * (1 - position->x)
   // desired accelerations inertial
   // float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
   // float mu_y = -visual_servoing.ol_y_pgain * position->y;
   // float mu_z = 9.81 + 0.1 * (position->z + 1);
 
+  // Desired accelerations
   float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
   float mu_y = -visual_servoing.ol_y_pgain * box_centroid_y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
-  float mu_z = 9.81 + visual_servoing.ol_z_pgain * box_centroid_x;
+  float mu_z = 9.81 + visual_servoing.ol_z_pgain * box_centroid_x + visual_servoing.ol_z_dgain * visual_servoing.box_x_err_d;
 
   // set the desired thrust
   float mass = (visual_servoing.nominal_throttle * MAX_PPRZ) / 9.81;
@@ -402,12 +432,12 @@ void update_errors(float box_x_err, float box_y_err, float div_err, float vs_dt)
   // maintain the controller errors:
   // Error of box x coordinate
   visual_servoing.box_x_err_sum += box_x_err;
-  visual_servoing.box_x_err_d = (((box_x_err - visual_servoing.previous_box_x_err) / vs_dt) - visual_servoing.box_x_err_d) * lp_factor;
+  visual_servoing.box_x_err_d = ((box_x_err - visual_servoing.previous_box_x_err) / vs_dt);
   visual_servoing.previous_box_x_err = box_x_err;
 
   // Error of box y coordinate
   visual_servoing.box_y_err_sum += box_y_err;
-  visual_servoing.box_y_err_d = (((box_y_err - visual_servoing.previous_box_y_err) / vs_dt)); // - visual_servoing.box_y_err_d) * lp_factor;
+  visual_servoing.box_y_err_d = ((box_y_err - visual_servoing.previous_box_y_err) / vs_dt);
   visual_servoing.previous_box_y_err = box_y_err;
 
   // Error of divergence
@@ -426,7 +456,6 @@ void guidance_h_module_init(void)
 
 void guidance_h_module_enter(void)
 {
-  visual_servoing_module_init();
   reset_all_vars();
 }
 
