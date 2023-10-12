@@ -64,11 +64,11 @@
 #endif
 
 #ifndef VS_OL_X_PGAIN
-#define VS_OL_X_PGAIN 3
+#define VS_OL_X_PGAIN 1.5
 #endif
 
 #ifndef VS_OL_Y_PGAIN
-#define VS_OL_Y_PGAIN 0.01
+#define VS_OL_Y_PGAIN 0.015
 #endif
 
 #ifndef VS_OL_Z_PGAIN
@@ -76,15 +76,19 @@
 #endif
 
 #ifndef VS_OL_X_DGAIN
-#define VS_OL_X_DGAIN 0.1
+#define VS_OL_X_DGAIN 0.0
 #endif
 
 #ifndef VS_OL_Y_DGAIN
-#define VS_OL_Y_DGAIN 0.002
+#define VS_OL_Y_DGAIN 0.006
 #endif
 
 #ifndef VS_OL_Z_DGAIN
 #define VS_OL_Z_DGAIN 0.002
+#endif
+
+#ifndef VS_OL_X_IGAIN
+#define VS_OL_X_IGAIN 0.01
 #endif
 
 #ifndef VS_LP_CONST
@@ -95,12 +99,16 @@
 #define VS_WINDOW_SIZE 20
 #endif
 
+#ifndef VS_THETA_OFFSET
+#define VS_THETA_OFFSET -0.03
+#endif
+
 #ifndef VS_SWITCH_TIME_CONSTANT
 #define VS_SWITCH_TIME_CONSTANT 0.01
 #endif
 
 #ifndef VS_DISTANCE_EST_THRESHOLD
-#define VS_DISTANCE_EST_THRESHOLD 0.07
+#define VS_DISTANCE_EST_THRESHOLD 0.1
 #endif
 
 
@@ -195,6 +203,7 @@ void visual_servoing_module_init(void)
   visual_servoing.ol_x_dgain = VS_OL_X_DGAIN;                  
   visual_servoing.ol_y_dgain = VS_OL_Y_DGAIN; // / VISUAL_SERVOING_CAMERA.output_size.w;                  
   visual_servoing.ol_z_dgain = VS_OL_Z_DGAIN;             
+  visual_servoing.ol_x_igain = VS_OL_X_IGAIN;             
   visual_servoing.previous_box_x_err = 0;
   visual_servoing.box_x_err_sum = 0;
   visual_servoing.box_x_err_d = 0;
@@ -208,6 +217,7 @@ void visual_servoing_module_init(void)
   visual_servoing.lp_const = VS_LP_CONST;
   visual_servoing.switch_time_constant = VS_SWITCH_TIME_CONSTANT;
   visual_servoing.distance_est_threshold = VS_DISTANCE_EST_THRESHOLD;
+  visual_servoing.theta_offset = VS_THETA_OFFSET;
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -263,7 +273,7 @@ void visual_servoing_module_run(bool in_flight)
 { 
   // Get the current state of the quadrotor
   struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
-  // attitude->theta += -0.05;
+  // attitude->theta += visual_servoing.theta_offset;
   struct NedCoor_f *position = stateGetPositionNed_f();
   struct NedCoor_f *speed = stateGetSpeedNed_f();
 
@@ -328,7 +338,7 @@ void visual_servoing_module_run(bool in_flight)
     theta_history[index_hist] = attitude->theta;
     divergence_variance = variance_f(divergence_history, visual_servoing.window_size); // below 0.001 is good enough
     divergence_mean = mean_f(divergence_history, visual_servoing.window_size);
-    float theta_mean = mean_f(theta_history, visual_servoing.window_size);
+    float theta_mean = mean_f(theta_history, visual_servoing.window_size) + visual_servoing.theta_offset;
 
     // Accuracy of the distance estimate
     set_point_error = fabsf(visual_servoing.divergence_sp - divergence_mean); // below 0.04 is good enough
@@ -382,11 +392,13 @@ void visual_servoing_module_run(bool in_flight)
   // visual_servoing.ol_x_pgain * (1 - position->x)
   // desired accelerations inertial
   // float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
-  // float mu_y = -visual_servoing.ol_y_pgain * position->y;
-  // float mu_z = 9.81 + 0.1 * (position->z + 1);
+  // float mu_y = -0.1 * position->y;
+  // float mu_z = 9.81 + 0.1 * (position->z + 0.5);
 
   // Desired accelerations
-  float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err - visual_servoing.ol_x_dgain * visual_servoing.div_err_sum;
+  float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
+               - visual_servoing.ol_x_igain * visual_servoing.div_err_sum
+               - visual_servoing.ol_x_dgain * visual_servoing.div_err_d;
   float mu_y = -visual_servoing.ol_y_pgain * box_centroid_y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
   float mu_z = 9.81 + visual_servoing.ol_z_pgain * box_centroid_x + visual_servoing.ol_z_dgain * visual_servoing.box_x_err_d;
 
@@ -442,7 +454,7 @@ void update_errors(float box_x_err, float box_y_err, float div_err, float vs_dt)
 
   // Error of divergence
   visual_servoing.div_err_sum += div_err;
-  visual_servoing.div_err_d += (((div_err - visual_servoing.previous_div_err) / vs_dt) - visual_servoing.div_err_d) * lp_factor;
+  visual_servoing.div_err_d = ((div_err - visual_servoing.previous_div_err) / vs_dt);
   visual_servoing.previous_div_err = div_err;
 }
 

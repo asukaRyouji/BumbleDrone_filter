@@ -154,6 +154,7 @@
       </program>
       <program name="Messages"/>
       <program name="Real-time Plotter"/>
+      <program name="Real-time Plotter"/>
     </session>
     <session name="visual_servoing">
       <program name="Data Link">

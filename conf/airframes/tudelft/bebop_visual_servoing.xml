@@ -12,10 +12,10 @@
       
       <!-- Detect orange -->
       <define name="COLOR_OBJECT_DETECTOR_LUM_MIN1" value="30"/>
-      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX1" value="100"/>
+      <define name="COLOR_OBJECT_DETECTOR_LUM_MAX1" value="135"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN1" value="70"/>
-      <define name="COLOR_OBJECT_DETECTOR_CB_MAX1" value="130"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="150"/>
+      <define name="COLOR_OBJECT_DETECTOR_CB_MAX1" value="114"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="155"/>
       <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="190"/>
       
       <!-- Detect green -->
@@ -78,7 +78,7 @@
     <module name="cv_detect_color_object">
       <!-- <define name="OBJECT_DETECTOR_VERBOSE" value="TRUE"/> -->
       <define name="COLOR_OBJECT_DETECTOR_CAMERA1" value="front_camera"/>
-      <define name="COLOR_OBJECT_DETECTOR_FPS1" value="0"/>
+      <define name="COLOR_OBJECT_DETECTOR_FPS1" value="30"/>
       <define name="COLOR_OBJECT_DETECTOR_DRAW1" value="1"/>
     
       <define name="COLOR_OBJECT_DETECTOR_CAMERA2" value="bottom_camera"/>
@@ -127,15 +127,15 @@
   </command_laws>
   
   <section name="BEBOP_FRONT_CAMERA" prefix="MT9F002_">
-    <define name="OUTPUT_HEIGHT" value="240" />
-    <define name="OUTPUT_WIDTH" value="240" />
+    <define name="OUTPUT_HEIGHT" value="400" />
+    <define name="OUTPUT_WIDTH" value="400" />
     <define name="OFFSET_X" value="0.09" />
     <define name="ZOOM" value="1.25"/>
     <define name="GAIN_GREEN1" value="10.0"/>
     <define name="GAIN_GREEN2" value="10.0"/>
     <define name="GAIN_BLUE" value="12.5"/>
     <define name="GAIN_RED" value="9.0"/>
-    <define name="TARGET_EXPOSURE" value="30" />
+    <define name="TARGET_EXPOSURE" value="30"/>
   </section>
 
   <section name="AIR_DATA" prefix="AIR_DATA_">
@@ -145,8 +145,8 @@
   </section>
 
   <section name="IMU" prefix="IMU_">
-    <define name="BODY_TO_IMU_PHI" value="0." unit="deg"/>
-    <define name="BODY_TO_IMU_THETA" value="0." unit="deg"/>
+    <define name="BODY_TO_IMU_PHI" value="-0.84" unit="deg"/>
+    <define name="BODY_TO_IMU_THETA" value="2.55" unit="deg"/>
     <define name="BODY_TO_IMU_PSI" value="0." unit="deg"/>
     <!-- Magneto calibration -->
     <define name="MAG_X_NEUTRAL" value="0"/>
@@ -209,10 +209,10 @@
     <define name="G1_Q" value="0.0299"/>
     <define name="G1_R" value="0.0014"/>
     <define name="G2_R" value="0.1219"/>
-    <!-- <define name="G1_P" value="0.0630"/>
+    <!-- <define name="G1_P" value="0.0600"/>
     <define name="G1_Q" value="0.0456"/>
-    <define name="G1_R" value="0.0049"/>
-    <define name="G2_R" value="0.2788"/> -->
+    <define name="G1_R" value="0.0028"/>
+    <define name="G2_R" value="0.1534"/> -->
 
     <define name="FILTER_ROLL_RATE" value="FALSE"/>
     <define name="FILTER_PITCH_RATE" value="FALSE"/>
@@ -280,9 +280,9 @@
 
   <section name="AUTOPILOT">
     <define name="MODE_STARTUP" value="AP_MODE_NAV"/>
-    <define name="MODE_MANUAL" value="AP_MODE_ATTITUDE_DIRECT"/>
-    <define name="MODE_AUTO1" value="AP_MODE_MODULE"/>
-    <define name="MODE_AUTO2" value="AP_MODE_MODULE"/>
+    <define name="MODE_MANUAL" value="AP_MODE_MODULE"/>
+    <define name="MODE_AUTO1" value="AP_MODE_NAV"/>
+    <define name="MODE_AUTO2" value="AP_MODE_NAV"/>
 
     <define name="NO_RC_THRUST_LIMIT" value="TRUE"/>
   </section>
