@@ -1497,7 +1497,8 @@
       <field name="true_distance"  type="float" unit="m"/>
       <field name="divergence_variance"  type="float"/>
       <field name="set_point_error"  type="float"/>
-      <field name="divergene_mean"  type="float"/>
+      <field name="divergence_mean"  type="float"/>
+      <field name="color_count"  type="float"/>
     </message>
 
     <message name="ROTORCRAFT_NAV_STATUS" id="159">

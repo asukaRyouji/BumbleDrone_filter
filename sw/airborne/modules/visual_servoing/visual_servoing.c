@@ -80,11 +80,11 @@
 #endif
 
 #ifndef VS_OL_Y_DGAIN
-#define VS_OL_Y_DGAIN 0.006
+#define VS_OL_Y_DGAIN 0.015
 #endif
 
 #ifndef VS_OL_Z_DGAIN
-#define VS_OL_Z_DGAIN 0.002
+#define VS_OL_Z_DGAIN 0.005
 #endif
 
 #ifndef VS_OL_X_IGAIN
@@ -125,9 +125,11 @@ uint32_t index_hist = 0;
 bool history_array_filled = FALSE;
 float distance_est = 0;
 float set_point_time = 0;
+float end_time = 0;
 float m_dt;
 float pitch_sp = 0;
 float roll_sp = 0;
+float thrust_set = 0;
 float vision_time, prev_vision_time;    // time stamp of the color object detector
 float color_count = 0;                // orange color count from color filter for obstacle detection
 float last_color_count = 1;
@@ -136,6 +138,8 @@ float box_centroid_x = 0;
 float box_centroid_y = 0;
 float true_distance = 0;
 int8_t set_point_count = 0;
+bool landing = FALSE;
+
 
 static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev)
 {
@@ -152,7 +156,8 @@ static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev
                                 &true_distance,
                                 &divergence_variance,
                                 &set_point_error,
-                                &divergence_mean);
+                                &divergence_mean,
+                                &color_count);
 }
 
 // This call back will be used to receive the color count from the orange detector
@@ -182,6 +187,8 @@ void visual_servoing_module_enter(void);
 void visual_servoing_module_run(bool in_flight);
 
 static void update_errors(float box_x_err, float box_y_err, float div_err, float vs_dt);
+
+static void final_land_in_box(float start_time);
 
 static void vs_init_filters(void);
 
@@ -266,6 +273,7 @@ static void reset_all_vars(void)
     divergence_history[i] = 0;
   }
   vs_init_filters();
+  landing = FALSE;
 }
 
 
@@ -290,9 +298,15 @@ void visual_servoing_module_run(bool in_flight)
 
   vs_dt = vision_time - prev_vision_time;
   prev_vision_time = vision_time;
+
+  // // Initiate final landing maneuver
+  // if (color_count > 45000 && !landing){
+  //   landing = TRUE;
+  //   end_time = (float)get_sys_time_usec() / 1e6;
+  // }
   
   // check if new measurement received
-  if (vs_dt > 1e-5){
+  if (vs_dt > 1e-5 && !landing){
     fps = 1/vs_dt;
     Bound(visual_servoing.lp_const, 0.001f, 1.f);
     float lp_factor = vs_dt / visual_servoing.lp_const;
@@ -399,23 +413,28 @@ void visual_servoing_module_run(bool in_flight)
   float mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
                - visual_servoing.ol_x_igain * visual_servoing.div_err_sum
                - visual_servoing.ol_x_dgain * visual_servoing.div_err_d;
-  float mu_y = -visual_servoing.ol_y_pgain * box_centroid_y - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
+  float mu_y = -visual_servoing.ol_y_pgain * (box_centroid_y - 2) - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
   float mu_z = 9.81 + visual_servoing.ol_z_pgain * box_centroid_x + visual_servoing.ol_z_dgain * visual_servoing.box_x_err_d;
 
-  // set the desired thrust
-  float mass = (visual_servoing.nominal_throttle * MAX_PPRZ) / 9.81;
-  float thrust_set = sqrtf(pow(mu_x, 2) + pow(mu_y, 2) + pow(mu_z, 2)) * mass;
+  if (!landing){
+    // set the desired thrust
+    float mass = (visual_servoing.nominal_throttle * MAX_PPRZ) / 9.81;
+    thrust_set = sqrtf(pow(mu_x, 2) + pow(mu_y, 2) + pow(mu_z, 2)) * mass;
 
+    // set desired angles
+    pitch_sp = atan2f(mu_x, mu_z);
+    roll_sp = asinf(mass * mu_y/thrust_set);
+    BoundAbs(pitch_sp, RadOfDeg(10.0));
+    BoundAbs(roll_sp, RadOfDeg(10.0));
+  }
+  else{
+    final_land_in_box(end_time);
+  }
+  
   if (in_flight) {
     Bound(thrust_set, 0.25 * guidance_v_nominal_throttle, MAX_PPRZ);
     stabilization_cmd[COMMAND_THRUST] = thrust_set;
   }
-
-  // set desired angles
-  pitch_sp = atan2f(mu_x, mu_z);
-  roll_sp = asinf(mass * mu_y/thrust_set);
-  BoundAbs(pitch_sp, RadOfDeg(10.0));
-  BoundAbs(roll_sp, RadOfDeg(10.0));
 
   float psi_cmd = attitude->psi;
 
@@ -456,6 +475,31 @@ void update_errors(float box_x_err, float box_y_err, float div_err, float vs_dt)
   visual_servoing.div_err_sum += div_err;
   visual_servoing.div_err_d = ((div_err - visual_servoing.previous_div_err) / vs_dt);
   visual_servoing.previous_div_err = div_err;
+}
+
+/**
+ * Execute the final landing procedure to land in the box when a certain distance from the target is reached
+ */
+void final_land_in_box(float start_time)
+{
+  float current_time = (float)get_sys_time_usec() / 1e6;
+  float delta_time = current_time - start_time;
+  // first 2 seconds accelerate forward
+  if (delta_time <= 1.5f){
+    pitch_sp = -0.04;
+    roll_sp = 0.001;
+    thrust_set = visual_servoing.nominal_throttle * MAX_PPRZ * 0.99;
+  }
+  // then, 1 second descending
+  if (1.5f < delta_time && delta_time <= 1.75f){
+    pitch_sp = 0;
+    roll_sp = 0;
+    thrust_set = visual_servoing.nominal_throttle * MAX_PPRZ * 0.85;
+  }
+  // kill throttle
+  if (delta_time > 1.75f){
+    autopilot_set_kill_throttle(true);
+  }
 }
 
 ////////////////////////////////////////////////////////////////////
