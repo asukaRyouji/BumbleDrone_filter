@@ -20,9 +20,12 @@ inline void setModule(void){
 </header>
   <waypoints>
     <waypoint lat="51.990634" lon="4.376789" name="HOME"/>
-    <waypoint name="INIT0" x="0.0" y="0.0"/>
     <waypoint name="INIT2" x="0.0" y="2.0"/>
-    <waypoint name="INIT-2" x="2.0" y="-2.0"/>
+    <waypoint name="INIT3" x="0.0" y="1.0"/>
+    <waypoint name="INIT4" x="0.0" y="0.0"/>
+    <waypoint name="INIT5" x="0.0" y="-1.0"/>
+    <waypoint name="INIT6" x="0.0" y="-2.0"/>
+    <waypoint name="INIT7" x="0.0" y="-3.0"/>
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
     <waypoint name="STDBY" x="1.9" y="1.0"/>
     <waypoint name="TD" x="0.8" y="-1.7"/>
@@ -84,20 +87,35 @@ inline void setModule(void){
       <call_once fun="NavSetWaypointHere(WP_STDBY)"/>
       <stay wp="STDBY"/>
     </block>
-    <block name="INIT0">
-      <call_once fun="setNav()"/>
-      <go wp="INIT0"/>
-      <stay wp="INIT0"/>
-    </block>
     <block name="INIT2">
       <call_once fun="setNav()"/>
       <go wp="INIT2"/>
       <stay wp="INIT2"/>
     </block>
-    <block name="INIT-2">
+    <block name="INIT3">
       <call_once fun="setNav()"/>
-      <go wp="INIT-2"/>
-      <stay wp="INIT-2"/>
+      <go wp="INIT3"/>
+      <stay wp="INIT3"/>
+    </block>
+    <block name="INIT4">
+      <call_once fun="setNav()"/>
+      <go wp="INIT4"/>
+      <stay wp="INIT4"/>
+    </block>
+    <block name="INIT5">
+      <call_once fun="setNav()"/>
+      <go wp="INIT5"/>
+      <stay wp="INIT5"/>
+    </block>
+    <block name="INIT6">
+      <call_once fun="setNav()"/>
+      <go wp="INIT6"/>
+      <stay wp="INIT6"/>
+    </block>
+    <block name="INIT7">
+      <call_once fun="setNav()"/>
+      <go wp="INIT7"/>
+      <stay wp="INIT7"/>
     </block>
     <block key="g" name="START" strip_button="Go" strip_icon="lookfore.png">
       <call_once fun="setModule()"/>
