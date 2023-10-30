@@ -78,7 +78,7 @@
     <module name="cv_detect_color_object">
       <!-- <define name="OBJECT_DETECTOR_VERBOSE" value="TRUE"/> -->
       <define name="COLOR_OBJECT_DETECTOR_CAMERA1" value="front_camera"/>
-      <define name="COLOR_OBJECT_DETECTOR_FPS1" value="30"/>
+      <define name="COLOR_OBJECT_DETECTOR_FPS1" value="0"/>
       <define name="COLOR_OBJECT_DETECTOR_DRAW1" value="1"/>
     
       <define name="COLOR_OBJECT_DETECTOR_CAMERA2" value="bottom_camera"/>
@@ -205,14 +205,15 @@
 
   <section name="STABILIZATION_ATTITUDE_INDI" prefix="STABILIZATION_INDI_">
     <!-- control effectiveness -->
+    <!-- <define name="G1_P" value="0.0526"/>
+    <define name="G1_Q" value="0.0394"/>
+    <define name="G1_R" value="0.0020"/>
+    <define name="G2_R" value="0.1771"/> -->
     <define name="G1_P" value="0.0397"/>
     <define name="G1_Q" value="0.0299"/>
     <define name="G1_R" value="0.0014"/>
     <define name="G2_R" value="0.1219"/>
-    <!-- <define name="G1_P" value="0.0600"/>
-    <define name="G1_Q" value="0.0456"/>
-    <define name="G1_R" value="0.0028"/>
-    <define name="G2_R" value="0.1534"/> -->
+  
 
     <define name="FILTER_ROLL_RATE" value="FALSE"/>
     <define name="FILTER_PITCH_RATE" value="FALSE"/>
@@ -251,7 +252,7 @@
 
     <define name="ADAPT_INITIAL_HOVER_THROTTLE" value="0.68" />
     <define name="ADAPT_MIN_HOVER_THROTTLE" value="0.55" />
-    <define name="ADAPT_MAX_HOVER_THROTTLE" value="0.72" />
+    <define name="ADAPT_MAX_HOVER_THROTTLE" value="0.75" />
     <!-- <define name="ADAPT_NOISE_FACTOR" value="0.8" /> -->
   </section>
 

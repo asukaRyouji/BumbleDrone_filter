@@ -1499,6 +1499,10 @@
       <field name="set_point_error"  type="float"/>
       <field name="divergence_mean"  type="float"/>
       <field name="color_count"  type="float"/>
+      <field name="accel_x"  type="float"/>
+      <field name="accel_x_est"  type="float"/>
+      <field name="divergence_sp"  type="float"/>
+      <field name="filtered_divergence"  type="float"/>
     </message>
 
     <message name="ROTORCRAFT_NAV_STATUS" id="159">

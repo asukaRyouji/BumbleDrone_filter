@@ -6,7 +6,7 @@
     Exercise module for Autonomous Flight of MAV Course
     </description>
     <section name="VS" prefix="VS_">
-      <define name="NOM_THROTTLE" value="0.68" description="nominal throttle"/>
+      <define name="NOM_THROTTLE" value="0.73" description="nominal throttle"/>
       <define name="DIVERGENCE_SP" value="1" description="divergence set-point"/>
       <define name="DIV_FACTOR" value="40000" description="scaling factor for divergence estimate"/>
       <define name="OL_X_PGAIN" value="0.1" description="outer loop x proportional gain"/>
@@ -20,12 +20,14 @@
       <define name="SWITCH_TIME_CONSTANT" value="0.1" description="Low pass filter adaption rate after set-point switch"/>
       <define name="DISTANCE_EST_THRESHOLD" value="0.01" description="Threshold for the minimum required distance estimation accuracy"/>
       <define name="THETA_OFFSET" value="0.01" description="offset for theta"/>
+      <define name="CD" value="0.9" description="drag factor"/>
+      <define name="DIV_CUTOFF_FREQ" value="0.9" description="Low pass filter cutoff freq for divergence measurements"/>
     </section>
   </doc>
   <settings>
     <dl_settings>
       <dl_settings NAME="VisualServoing">
-        <dl_setting var="visual_servoing.nominal_throttle" min="0" step="0.01" max="0.7" module="visual_servoing/visual_servoing" shortname="nominal_throttle" param="VS_NOM_THROTTLE"/>
+        <dl_setting var="visual_servoing.nominal_throttle" min="0" step="0.001" max="0.8" module="visual_servoing/visual_servoing" shortname="nominal_throttle" param="VS_NOM_THROTTLE"/>
         <dl_setting var="visual_servoing.divergence_sp" min="0" step="0.01" max="1" module="visual_servoing/visual_servoing" shortname="divergence_sp" param="VS_DIVERGENCE_SP"/>
         <dl_setting var="visual_servoing.div_factor" min="0" step="100" max="5000" module="visual_servoing/visual_servoing" shortname="div_factor" param="VS_DIV_FACTOR"/>
         <dl_setting var="visual_servoing.ol_x_pgain" min="0" step="0.1" max="15" module="visual_servoing/visual_servoing" shortname="ol_x_pgain" param="VS_OL_X_PGAIN"/>
@@ -34,11 +36,13 @@
         <dl_setting var="visual_servoing.ol_x_dgain" min="0" step="0.001" max="1" module="visual_servoing/visual_servoing" shortname="ol_x_dgain" param="VS_OL_X_DGAIN"/>
         <dl_setting var="visual_servoing.ol_y_dgain" min="0" step="0.001" max="0.1" module="visual_servoing/visual_servoing" shortname="ol_y_dgain" param="VS_OL_Y_DGAIN"/>
         <dl_setting var="visual_servoing.ol_z_dgain" min="0" step="0.001" max="0.1" module="visual_servoing/visual_servoing" shortname="ol_z_dgain" param="VS_OL_Z_DGAIN"/>
-        <dl_setting var="visual_servoing.ol_x_igain" min="0" step="0.001" max="0.1" module="visual_servoing/visual_servoing" shortname="ol_x_igain" param="VS_OL_X_IGAIN"/>
+        <dl_setting var="visual_servoing.ol_x_igain" min="0" step="0.001" max="1" module="visual_servoing/visual_servoing" shortname="ol_x_igain" param="VS_OL_X_IGAIN"/>
         <dl_setting var="visual_servoing.lp_const" min="0" step="0.01" max="1" module="visual_servoing/visual_servoing" shortname="lp_const" param="VS_LP_CONST"/>
         <dl_setting var="visual_servoing.switch_time_constant" min="0" step="0.01" max="0.4" module="visual_servoing/visual_servoing" shortname="switch_time_constant" param="VS_SWITCH_TIME_CONSTANT"/>
         <dl_setting var="visual_servoing.distance_est_threshold" min="0" step="0.001" max="0.1" module="visual_servoing/visual_servoing" shortname="dist_est_thresold" param="VS_DISTANCE_EST_THRESHOLD"/>
         <dl_setting var="visual_servoing.theta_offset" min="-1" step="0.001" max="1" module="visual_servoing/visual_servoing" shortname="theta_offset" param="VS_THETA_OFFSET"/>
+        <dl_setting var="visual_servoing.cd" min="-3" step="0.001" max="3" module="visual_servoing/visual_servoing" shortname="cd" param="VS_CD"/>
+        <dl_setting var="visual_servoing.div_cutoff_freq" min="0" step="0.001" max="20" module="visual_servoing/visual_servoing" shortname="div_cutoff" param="VS_DIV_CUTOFF_FREQ"/>
       </dl_settings>
     </dl_settings>
   </settings>

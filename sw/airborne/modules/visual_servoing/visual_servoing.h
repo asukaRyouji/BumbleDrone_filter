@@ -60,7 +60,8 @@ struct VisualServoing {
   float distance_accuracy;
   float distance_est_threshold;
   float theta_offset;
-  Butterworth2LowPass lpf;
+  float cd;
+  float div_cutoff_freq;
 };
 
 extern struct VisualServoing visual_servoing;

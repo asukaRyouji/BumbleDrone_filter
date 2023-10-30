@@ -273,7 +273,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
     uint32_t p_yc_norm = (uint32_t)roundf(tot_y / ((float) cnt));
 
     struct FloatEulers *attitude = stateGetNedToBodyEulers_f();
-    uint32_t xc_derotated = (uint32_t)roundf(p_xc_norm + 800 * tanf(attitude->theta)); // COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.focal_x
+    uint32_t xc_derotated = (uint32_t)roundf(p_xc_norm + 300 * tanf(attitude->theta)); // COLOR_OBJECT_DETECTOR_CAMERA1.camera_intrinsics.focal_x
     // printf("focal_x: %f \n", img->eulers.theta); 
 
     struct point_t loc = { .x = xc_derotated, .y = p_yc_norm };
