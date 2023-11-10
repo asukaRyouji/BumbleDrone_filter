@@ -20,12 +20,12 @@ inline void setModule(void){
 </header>
   <waypoints>
     <waypoint lat="51.990634" lon="4.376789" name="HOME"/>
-    <waypoint name="INIT2" x="0.0" y="2.0"/>
-    <waypoint name="INIT3" x="0.0" y="1.0"/>
-    <waypoint name="INIT4" x="0.0" y="0.0"/>
-    <waypoint name="INIT5" x="0.0" y="-1.0"/>
-    <waypoint name="INIT6" x="0.0" y="-2.0"/>
-    <waypoint name="INIT7" x="0.0" y="-3.0"/>
+    <waypoint name="2" x="0.0" y="2.0"/>
+    <waypoint name="3" x="0.0" y="1.0"/>
+    <waypoint name="4" x="0.0" y="0.0"/>
+    <waypoint name="5" x="0.0" y="-1.0"/>
+    <waypoint name="6" x="0.0" y="-2.0"/>
+    <waypoint name="7" x="0.0" y="-3.0"/>
     <waypoint name="CLIMB" x="1.9" y="1.0"/>
     <waypoint name="STDBY" x="1.9" y="1.0"/>
     <waypoint name="TD" x="0.8" y="-1.7"/>
@@ -89,37 +89,77 @@ inline void setModule(void){
     </block>
     <block name="INIT2">
       <call_once fun="setNav()"/>
-      <go wp="INIT2"/>
-      <stay wp="INIT2"/>
+      <go wp="2"/>
+      <stay wp="2"/>
     </block>
     <block name="INIT3">
       <call_once fun="setNav()"/>
-      <go wp="INIT3"/>
-      <stay wp="INIT3"/>
+      <go wp="3"/>
+      <stay wp="3"/>
     </block>
     <block name="INIT4">
       <call_once fun="setNav()"/>
-      <go wp="INIT4"/>
-      <stay wp="INIT4"/>
+      <go wp="4"/>
+      <stay wp="4"/>
     </block>
     <block name="INIT5">
       <call_once fun="setNav()"/>
-      <go wp="INIT5"/>
-      <stay wp="INIT5"/>
+      <go wp="5"/>
+      <stay wp="5"/>
     </block>
     <block name="INIT6">
       <call_once fun="setNav()"/>
-      <go wp="INIT6"/>
-      <stay wp="INIT6"/>
+      <go wp="6"/>
+      <stay wp="6"/>
     </block>
     <block name="INIT7">
       <call_once fun="setNav()"/>
-      <go wp="INIT7"/>
-      <stay wp="INIT7"/>
+      <go wp="7"/>
+      <stay wp="7"/>
     </block>
     <block key="g" name="START" strip_button="Go" strip_icon="lookfore.png">
       <call_once fun="setModule()"/>
       <stay wp="STDBY"/>
+    </block>
+    <block key="g" name="Gather data" strip_button="Go" strip_icon="lookfore.png">
+      <call_once fun="setNav()"/>
+      <go wp="7"/>
+      <stay wp="7" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.6)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <go wp="6"/>
+      <stay wp="6" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.6)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <go wp="5"/>
+      <stay wp="5" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.6)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <go wp="4"/>
+      <stay wp="4" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.6)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <go wp="3"/>
+      <stay wp="3" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.6)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <go wp="2"/>
+      <stay wp="2" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.6)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <stay wp="4"/>
     </block>
     <block name="STOP">
       <call_once fun="NavSetWaypointHere(WP_STDBY)"/>

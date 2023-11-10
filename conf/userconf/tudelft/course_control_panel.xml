@@ -22,7 +22,7 @@
     <program name="Log File Player" command="sw/logalizer/play"/>
     <program name="Simulator" command="sw/simulator/pprzsim-launch"/>
     <program name="Joystick" command="sw/ground_segment/joystick/input2ivy">
-      <arg flag="-ac" constant="@AIRCRAFT"/>
+      <arg flag="-ac" constant="bebop_visual_servoing"/>
       <arg flag="turnigy_9xr.xml"/>
     </program>
     <program name="Environment Simulator" command="sw/simulator/gaia"/>
@@ -44,17 +44,44 @@
         <arg flag="-n"/>
       </program>
       <program name="GCS">
-        <arg flag="-speech"/>
-        <arg flag="-maximize"/>
         <arg flag="-center_ac"/>
         <arg flag="-mercator"/>
         <arg flag="-maps_no_http"/>
         <arg flag="-track_size" constant="200"/>
         <arg flag="-zoom" constant="40."/>
+        <arg flag="-layout" constant="sander_layout.xml"/>
       </program>
       <program name="Gazebo"/>
       <program name="Messages"/>
-      <program name="Real-time Plotter"/>
+      <program name="Real-time Plotter">
+        <arg flag="-g" constant="800x250-0+0"/>
+        <arg flag="-t" constant="DIV"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0.00"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:pitch_measured"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:divergence"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:divergence_sp"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:mu_x"/>
+        <arg flag="-n"/>
+        <arg flag="-g" constant="800x250-0+250"/>
+        <arg flag="-t" constant="FPS"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0.00"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:fps"/>
+        <arg flag="-n"/>
+        <arg flag="-g" constant="800x250-0+500"/>
+        <arg flag="-t" constant="DIV_INTEGRAL"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0.00"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:div_sum"/>
+        <arg flag="-n"/>
+        <arg flag="-g" constant="800x250-0+750"/>
+        <arg flag="-t" constant="DISTANCE"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:distance_est"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:true_distance"/>
+      </program>
       <program name="Real-time Plotter"/>
     </session>
     <session name="Simulation - Gazebo + Joystick">
@@ -105,44 +132,22 @@
         <arg flag="-ac" constant="45"/>
       </program>
     </session>
-    <session name="Distance Counter">
-      <program name="Real-time Distance Counter"/>
-    </session>
-    <session name="visual_servoing_conf">
-      <program name="Simulator">
-        <arg flag="-a" constant="bebop_visual_servoing"/>
-        <arg flag="-t" constant="nps"/>
-      </program>
-      <program name="Data Link">
-        <arg flag="-udp"/>
-        <arg flag="-ping_period" constant="100"/>
-      </program>
-      <program name="Server">
-        <arg flag="-n"/>
-      </program>
-      <program name="GCS">
-        <arg flag="-speech"/>
-        <arg flag="-maximize"/>
-        <arg flag="-center_ac"/>
-        <arg flag="-mercator"/>
-        <arg flag="-maps_no_http"/>
-        <arg flag="-track_size" constant="200"/>
-        <arg flag="-zoom" constant="40."/>
-      </program>
-      <program name="Gazebo"/>
-      <program name="Messages"/>
-      <program name="Real-time Plotter"/>
-    </session>
     <session name="Flight Bebop">
       <program name="Data Link">
         <arg flag="-udp"/>
       </program>
       <program name="Server"/>
       <program name="GCS">
-        <arg flag="-speech"/>
+        <arg flag="-center_ac"/>
+        <arg flag="-mercator"/>
+        <arg flag="-maps_no_http"/>
+        <arg flag="-track_size" constant="200"/>
+        <arg flag="-zoom" constant="40."/>
+        <arg flag="-layout" constant="sander_layout.xml"/>
       </program>
       <program name="Joystick">
-        <arg flag="-ac" constant="turnigy_9xr.xml"/>
+        <arg flag="-ac" constant="bebop_visual_servoing"/>
+        <arg flag="turnigy_9xr.xml"/>
         <arg flag="-d" constant="1"/>
       </program>
       <program name="NatNet3">
@@ -150,57 +155,40 @@
         <arg flag="--x_angle_from_right"/>
         <arg flag="-23.0"/>
         <arg flag="--ac_nose" constant="right"/>
-        <arg flag="-ac" constant="45"/>
+        <arg flag="-ac" constant="124"/>
+        <arg flag="45"/>
       </program>
       <program name="Messages"/>
-      <program name="Real-time Plotter"/>
-      <program name="Real-time Plotter"/>
-    </session>
-    <session name="visual_servoing">
-      <program name="Data Link">
-        <arg flag="-udp"/>
-      </program>
-      <program name="Server"/>
-      <program name="GCS">
-        <arg flag="-speech"/>
-      </program>
-      <program name="Joystick">
-        <arg flag="-ac" constant="turnigy_9xr.xml"/>
-        <arg flag="-d" constant="1"/>
-      </program>
-      <program name="NatNet3">
-        <arg flag="--long_edge" constant="right"/>
-        <arg flag="--x_side" constant="right"/>
-        <arg flag="--ac_nose" constant="right"/>
-        <arg flag="-ac" constant="45"/>
-      </program>
-    </session>
-    <session name="Simulation - Gazebo + Joystiek">
-      <program name="Simulator">
-        <arg flag="-a" constant="bebop_visual_servoing"/>
-        <arg flag="-t" constant="nps"/>
-      </program>
-      <program name="Data Link">
-        <arg flag="-udp"/>
-        <arg flag="-ping_period" constant="100"/>
-      </program>
-      <program name="Server">
+      <program name="Real-time Plotter">
+        <arg flag="-g" constant="800x250-0+0"/>
+        <arg flag="-t" constant="DIV"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0.00"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:pitch_measured"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:true_divergence"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:divergence_sp"/>
+        <!-- <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:mu_x"/> -->
         <arg flag="-n"/>
+        <arg flag="-g" constant="800x250-0+250"/>
+        <arg flag="-t" constant="FPS"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0.00"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:fps"/>
+        <arg flag="-n"/>
+        <arg flag="-g" constant="800x250-0+500"/>
+        <arg flag="-t" constant="DIV_INTEGRAL"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0.00"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:div_sum"/>
+        <arg flag="-n"/>
+        <arg flag="-g" constant="800x250-0+750"/>
+        <arg flag="-t" constant="DISTANCE"/>
+        <arg flag="-u" constant="0.1"/>
+        <arg flag="-c" constant="0"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:distance_est"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:true_distance"/>
       </program>
-      <program name="GCS">
-        <arg flag="-speech"/>
-        <arg flag="-maximize"/>
-        <arg flag="-center_ac"/>
-        <arg flag="-mercator"/>
-        <arg flag="-maps_no_http"/>
-        <arg flag="-track_size" constant="200"/>
-        <arg flag="-zoom" constant="40."/>
-      </program>
-      <program name="Joystick">
-        <arg flag="-ac" constant="sm600.xml"/>
-        <arg flag="-d" constant="1"/>
-      </program>
-      <program name="Gazebo"/>
+      <program name="Real-time Plotter"/>
     </session>
   </section>
 </control_panel>

@@ -33,6 +33,9 @@
 
 struct VisualServoing {
   float nominal_throttle;
+  float mu_x;
+  float mu_y;
+  float mu_z;
   float divergence_sp;
   float divergence;
   float true_divergence;
@@ -62,6 +65,9 @@ struct VisualServoing {
   float theta_offset;
   float cd;
   float div_cutoff_freq;
+  float color_count;
+  float delta_pixels;
+  float pitch_sum;
 };
 
 extern struct VisualServoing visual_servoing;

@@ -12,7 +12,9 @@
         "Makefile.*": "makefile",
         "string": "c",
         "undistortion.h": "c",
-        "tensor": "c"
+        "tensor": "c",
+        "cmath": "c",
+        "complex": "c"
     },
     "C_Cpp.dimInactiveRegions": false,
     "esbonio.sphinx.confDir": "",
