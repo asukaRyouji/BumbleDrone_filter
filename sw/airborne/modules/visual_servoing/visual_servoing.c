@@ -591,7 +591,7 @@ float divergence_step(float switch_time, float mag)
     accel_x = -mag * sinf(2 * M_PI * delta_time);
   }
   // Give a sin input to the forward acceleration 
-  else {accel_x = -mag * expf(-0.6 * delta_time);} // -1.2
+  else {accel_x = -mag * expf(-1.2 * delta_time);} // -0.6
 
   // if (delta_time >= 1.5 && count == 0){
   //   float new_sp = divergence_mean;
@@ -605,8 +605,8 @@ float divergence_step(float switch_time, float mag)
     visual_servoing.delta_pixels = (sqrtf(visual_servoing.color_count) - sqrtf(start_color_count)) / delta_time;
     visual_servoing.divergence_sp = new_sp;
     visual_servoing.div_err = 0;
-    visual_servoing.div_err_sum = 2; // 0
-    switch_distance = 3.42f* powf(-visual_servoing.pitch_sum, 0.168f) * powf(visual_servoing.delta_pixels, -0.515f);
+    visual_servoing.div_err_sum = 0; // 2
+    switch_distance = 0.09f* powf(-visual_servoing.pitch_sum, 0.483f) * powf(new_sp, -1.02f);
     switch_time_end = current_time;
     switching = FALSE;
   }  
