@@ -36,8 +36,8 @@
       <define name="COLOR_OBJECT_DETECTOR_LUM_MAX1" value="183"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MIN1" value="53"/>
       <define name="COLOR_OBJECT_DETECTOR_CB_MAX1" value="121"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="134"/>
-      <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="249"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MIN1" value="175"/>
+      <define name="COLOR_OBJECT_DETECTOR_CR_MAX1" value="225"/>
       
       <!-- Detect green -->
       <define name="COLOR_OBJECT_DETECTOR_LUM_MIN2" value="0"/>
@@ -248,7 +248,7 @@
     <define name="HOVER_KD" value="82"/>
     <define name="HOVER_KI" value="20"/>
     <define name="NOMINAL_HOVER_THROTTLE" value="0.68"/>
-    <define name="ADAPT_THROTTLE_ENABLED" value="TRUE"/>
+    <define name="ADAPT_THROTTLE_ENABLED" value="FALSE"/>
 
     <define name="ADAPT_INITIAL_HOVER_THROTTLE" value="0.68" />
     <define name="ADAPT_MIN_HOVER_THROTTLE" value="0.55" />

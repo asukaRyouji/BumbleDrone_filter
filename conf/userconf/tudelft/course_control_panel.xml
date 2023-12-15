@@ -151,6 +151,7 @@
         <arg flag="-d" constant="1"/>
       </program>
       <program name="NatNet3">
+        <arg flag="--up_axis" constant="z_up"/>
         <arg flag="--long_edge" constant="right"/>
         <arg flag="--x_angle_from_right"/>
         <arg flag="-23.0"/>

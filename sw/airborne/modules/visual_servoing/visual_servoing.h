@@ -37,7 +37,9 @@ struct VisualServoing {
   float mu_y;
   float mu_z;
   float divergence_sp;
+  float set_point;
   float divergence;
+  float raw_divergence;
   float true_divergence;
   uint32_t window_size;                       
   float ol_x_pgain;                    
@@ -47,6 +49,8 @@ struct VisualServoing {
   float ol_y_dgain;               
   float ol_z_dgain;
   float ol_x_igain;                             
+  float box_centroid_x;                             
+  float box_centroid_y;                             
   float previous_box_x_err;
   float box_x_err_sum;
   float box_x_err_d;
@@ -61,6 +65,7 @@ struct VisualServoing {
   float div_factor;
   float switch_time_constant;
   float distance_accuracy;
+  float distance_est;
   float distance_est_threshold;
   float theta_offset;
   float cd;
