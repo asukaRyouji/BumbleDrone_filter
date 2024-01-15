@@ -22,8 +22,8 @@ inline void setModule(void){
     <waypoint lat="51.990634" lon="4.376789" name="HOME"/>
     <waypoint name="2" x="0.0" y="2.0" height="1."/>
     <waypoint name="3" x="0.5" y="1.0" height="1.5"/>
-    <waypoint name="4" x="-0.5" y="0.0" height="0.5"/>
-    <waypoint name="5" x="0.0" y="-1.0" height="2."/>
+    <waypoint name="4" x="-0.5" y="0.0" height="1."/>
+    <waypoint name="5" x="2.0" y="-1.0" height="2."/>
     <waypoint name="6" x="-2.0" y="-2.0" height="0.5"/>
     <waypoint name="7" x="2.0" y="-3.0" height="2."/>
     <waypoint name="8" x="-2.0" y="-4.0" height="0.5"/>
@@ -133,41 +133,60 @@ inline void setModule(void){
       <call_once fun="setModule()"/>
       <stay wp="STDBY"/>
     </block>
+    <block key="g" name="Constant speed" strip_button="Go" strip_icon="lookfore.png">
+      <call_once fun="setNav()"/>
+      <while cond="LessThan(GetPosY(), 3.8)">
+        <call_once fun="setModule()"/>
+      </while>
+      <stay wp="STDBY"/>
+    </block>
     <block key="g" name="Gather data" strip_button="Go" strip_icon="lookfore.png">
+    <!-- <call_once fun="setNav()"/>
+      <go wp="9"/>
+      <stay wp="9" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.8)">
+        <call_once fun="setModule()"/>
+      </while>
+      <call_once fun="setNav()"/>
+      <go wp="8"/>
+      <stay wp="8" until="stage_time>5"/>
+      <while cond="LessThan(GetPosY(), 3.8)">
+        <call_once fun="setModule()"/>
+      </while> -->
       <call_once fun="setNav()"/>
       <go wp="7"/>
       <stay wp="7" until="stage_time>5"/>
-      <while cond="LessThan(GetPosY(), 3.6)">
+      <while cond="LessThan(GetPosY(), 3.8)">
         <call_once fun="setModule()"/>
       </while>
       <call_once fun="setNav()"/>
       <go wp="6"/>
       <stay wp="6" until="stage_time>5"/>
-      <while cond="LessThan(GetPosY(), 3.6)">
+      <while cond="LessThan(GetPosY(), 3.8)">
         <call_once fun="setModule()"/>
       </while>
       <call_once fun="setNav()"/>
       <go wp="5"/>
       <stay wp="5" until="stage_time>5"/>
-      <while cond="LessThan(GetPosY(), 3.6)">
+      <while cond="LessThan(GetPosY(), 3.8)">
         <call_once fun="setModule()"/>
       </while>
       <call_once fun="setNav()"/>
       <go wp="4"/>
       <stay wp="4" until="stage_time>5"/>
-      <while cond="LessThan(GetPosY(), 3.6)">
+      <while cond="LessThan(GetPosY(), 3.8)">
         <call_once fun="setModule()"/>
       </while>
       <call_once fun="setNav()"/>
       <go wp="3"/>
       <stay wp="3" until="stage_time>5"/>
-      <while cond="LessThan(GetPosY(), 3.6)">
+      <while cond="LessThan(GetPosY(), 3.8)">
         <call_once fun="setModule()"/>
       </while>
       <call_once fun="setNav()"/>
       <go wp="2"/>
       <stay wp="2" until="stage_time>5"/>
-      <while cond="LessThan(GetPosY(), 3.6)">
+      <while cond="LessThan(GetPosY(), 3.8)">
         <call_once fun="setModule()"/>
       </while>
       <call_once fun="setNav()"/>
