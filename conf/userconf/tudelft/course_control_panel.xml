@@ -154,9 +154,9 @@
         <arg flag="--up_axis" constant="z_up"/>
         <arg flag="--long_edge" constant="right"/>
         <arg flag="--x_angle_from_right"/>
-        <arg flag="-23.0"/>
+        <arg flag="-50.0"/>
         <arg flag="--ac_nose" constant="right"/>
-        <arg flag="-ac" constant="127"/>
+        <arg flag="-ac" constant="2006"/>
         <arg flag="45"/>
       </program>
       <program name="Messages"/>
@@ -168,6 +168,7 @@
         <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:pitch_measured"/>
         <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:true_divergence"/>
         <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:divergence_sp"/>
+        <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:divergence"/>
         <!-- <arg flag="-c" constant="*:telemetry:VISUAL_SERVOING:mu_x"/> -->
         <arg flag="-n"/>
         <arg flag="-g" constant="800x250-0+250"/>

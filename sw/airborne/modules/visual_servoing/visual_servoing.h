@@ -32,6 +32,7 @@
 #include "filters/low_pass_filter.h"
 
 struct VisualServoing {
+  float dt;
   float nominal_throttle;
   float mu_x;
   float mu_y;
