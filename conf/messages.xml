@@ -1495,14 +1495,9 @@
       <field name="box_centroid_y"  type="float" unit="pixel"/>
       <field name="distance_est"  type="float" unit="m"/>
       <field name="true_distance"  type="float" unit="m"/>
-      <field name="divergence_variance"  type="float"/>
-      <field name="set_point_error"  type="float"/>
-      <field name="divergence_mean"  type="float"/>
       <field name="color_count"  type="float"/>
       <field name="accel_x"  type="float"/>
-      <field name="accel_x_est"  type="float"/>
       <field name="divergence_sp"  type="float"/>
-      <field name="filtered_divergence"  type="float"/>
       <field name="div_sum"  type="float"/>
       <field name="mu_x"  type="float"/>
     </message>
