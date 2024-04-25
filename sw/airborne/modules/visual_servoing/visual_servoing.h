@@ -5,24 +5,9 @@
  *
  */
 /**
- * @file "modules/orange_avoider/orange_avoider_guided.c"
- * @author Kirk Scheper
- * This module is an example module for the course AE4317 Autonomous Flight of Micro Air Vehicles at the TU Delft.
- * This module is used in combination with a color filter (cv_detect_color_object) and the guided mode of the autopilot.
- * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
- * (given by color_count_frac) we assume that there is an obstacle and we turn.
- *
- * The color filter settings are set using the cv_detect_color_object. This module can run multiple filters simultaneously
- * so you have to define which filter to use with the ORANGE_AVOIDER_VISUAL_DETECTION_ID setting.
- * This module differs from the simpler orange_avoider.xml in that this is flown in guided mode. This flight mode is
- * less dependent on a global positioning estimate as witht the navigation mode. This module can be used with a simple
- * speed estimate rather than a global position.
- *
- * Here we also need to use our onboard sensors to stay inside of the cyberzoo and not collide with the nets. For this
- * we employ a simple color detector, similar to the orange poles but for green to detect the floor. When the total amount
- * of green drops below a given threshold (given by floor_count_frac) we assume we are near the edge of the zoo and turn
- * around. The color detection is done by the cv_detect_color_object module, use the FLOOR_VISUAL_DETECTION_ID setting to
- * define which filter to use.
+ * @file "modules/visual_servoing/visual_servoing.c"
+ * @author Sander Hazelaar
+ * This module is used for the thesis project: "Adaptive Visual Servoing Control for Quadrotors: A Bio-inspired Strategy Using Active Vision"
  */
 
 #ifndef VISUAL_SERVOING_H
@@ -42,11 +27,9 @@ struct VisualServoing {
   float divergence;
   float raw_divergence;
   float true_divergence;
-  uint32_t window_size;                       
   float ol_x_pgain;                    
   float ol_y_pgain;   
   float ol_z_pgain;                 
-  float ol_x_dgain;                 
   float ol_y_dgain;               
   float ol_z_dgain;
   float ol_x_igain;                             
@@ -61,19 +44,18 @@ struct VisualServoing {
   float div_err;
   float previous_div_err;
   float div_err_sum;
-  float div_err_d;
   float lp_const;
-  float div_factor;
-  float switch_time_constant;
-  float distance_accuracy;
+  float switch_magnitude;
   float distance_est;
-  float distance_est_threshold;
+  float switch_decay;
   float theta_offset;
-  float cd;
   float div_cutoff_freq;
   float color_count;
   float delta_pixels;
   float pitch_sum;
+  float manual_switching;
+  float new_set_point;
+  float color_count_threshold;
 };
 
 extern struct VisualServoing visual_servoing;

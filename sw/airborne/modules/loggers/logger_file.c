@@ -96,7 +96,6 @@ static void logger_file_write_row(FILE *file) {
   struct NedCoor_f *vel = stateGetSpeedNed_f();
   struct NedCoor_f *acc = stateGetAccelNed_f();
   struct FloatEulers *att = stateGetNedToBodyEulers_f();
-  struct FloatRates *rates = stateGetBodyRates_f();
 
   fprintf(file, "%f,", get_sys_time_float());
   fprintf(file, "%f,%f,%f,", pos->x, pos->y, pos->z);

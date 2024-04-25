@@ -5,24 +5,9 @@
  *
  */
 /**
- * @file "modules/orange_avoider/orange_avoider_guided.c"
- * @author Kirk Scheper
- * This module is an example module for the course AE4317 Autonomous Flight of Micro Air Vehicles at the TU Delft.
- * This module is used in combination with a color filter (cv_detect_color_object) and the guided mode of the autopilot.
- * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
- * (given by color_count_frac) we assume that there is an obstacle and we turn.
- *
- * The color filter settings are set using the cv_detect_color_object. This module can run multiple filters simultaneously
- * so you have to define which filter to use with the ORANGE_AVOIDER_VISUAL_DETECTION_ID setting.
- * This module differs from the simpler orange_avoider.xml in that this is flown in guided mode. This flight mode is
- * less dependent on a global positioning estimate as witht the navigation mode. This module can be used with a simple
- * speed estimate rather than a global position.
- *
- * Here we also need to use our onboard sensors to stay inside of the cyberzoo and not collide with the nets. For this
- * we employ a simple color detector, similar to the orange poles but for green to detect the floor. When the total amount
- * of green drops below a given threshold (given by floor_count_frac) we assume we are near the edge of the zoo and turn
- * around. The color detection is done by the cv_detect_color_object module, use the FLOOR_VISUAL_DETECTION_ID setting to
- * define which filter to use.
+ * @file "modules/visual_servoing/visual_servoing.c"
+ * @author Sander Hazelaar
+ * This module is used for the thesis project: "Adaptive Visual Servoing Control for Quadrotors: A Bio-inspired Strategy Using Active Vision"
  */
 
 #include <math.h>
@@ -71,10 +56,6 @@
 #define VS_OL_Z_PGAIN 0.01
 #endif
 
-#ifndef VS_OL_X_DGAIN
-#define VS_OL_X_DGAIN 0.0
-#endif
-
 #ifndef VS_OL_Y_DGAIN
 #define VS_OL_Y_DGAIN 0.015
 #endif
@@ -83,7 +64,6 @@
 #define VS_OL_Z_DGAIN 0.005
 #endif
 
-// 0.04
 #ifndef VS_OL_X_IGAIN
 #define VS_OL_X_IGAIN 0.01
 #endif
@@ -96,20 +76,24 @@
 #define VS_THETA_OFFSET 0.0
 #endif
 
-#ifndef VS_SWITCH_TIME_CONSTANT
-#define VS_SWITCH_TIME_CONSTANT 1.5
+#ifndef VS_SWITCH_MAGNITUDE
+#define VS_SWITCH_MAGNITUDE 1.5
 #endif
 
-#ifndef VS_DISTANCE_EST_THRESHOLD
-#define VS_DISTANCE_EST_THRESHOLD 50000
+#ifndef VS_SWITCH_DECAY
+#define VS_SWITCH_DECAY 1.2
 #endif
 
-#ifndef VS_CD
-#define VS_CD 0.9
+#ifndef VS_MANUAL_SWITCHING
+#define VS_MANUAL_SWITCHING 0
 #endif
 
-#ifndef VS_DIV_CUTOFF_FREQ
-#define VS_DIV_CUTOFF_FREQ 0.1
+#ifndef VS_NEW_SET_POINT
+#define VS_NEW_SET_POINT 0.3
+#endif
+
+#ifndef VS_CC_THRESHOLD
+#define VS_CC_THRESHOLD 5000
 #endif
 
 // define and initialise global variables
@@ -128,7 +112,6 @@ bool switching = FALSE;
 float switch_time_start = 0;
 float switch_time_end = 0;
 float start_color_count = 0;
-float magnitude;
 float switch_distance = 10;
 
 // Setup the message for the logger
@@ -202,7 +185,6 @@ void visual_servoing_module_init(void)
   visual_servoing.ol_x_pgain = VS_OL_X_PGAIN;                    
   visual_servoing.ol_y_pgain = VS_OL_Y_PGAIN; 
   visual_servoing.ol_z_pgain = VS_OL_Z_PGAIN;                   
-  visual_servoing.ol_x_dgain = VS_OL_X_DGAIN;                  
   visual_servoing.ol_y_dgain = VS_OL_Y_DGAIN;                   
   visual_servoing.ol_z_dgain = VS_OL_Z_DGAIN;             
   visual_servoing.ol_x_igain = VS_OL_X_IGAIN;             
@@ -215,14 +197,14 @@ void visual_servoing_module_init(void)
   visual_servoing.div_err = 0;
   visual_servoing.previous_div_err = 0;
   visual_servoing.div_err_sum = 0;
-  visual_servoing.div_err_d = 0;
   visual_servoing.lp_const = VS_LP_CONST;
-  visual_servoing.switch_time_constant = VS_SWITCH_TIME_CONSTANT;
-  visual_servoing.distance_est_threshold = VS_DISTANCE_EST_THRESHOLD;
+  visual_servoing.switch_magnitude = VS_SWITCH_MAGNITUDE;
+  visual_servoing.switch_decay = VS_SWITCH_DECAY;
   visual_servoing.distance_est = 10;
   visual_servoing.theta_offset = VS_THETA_OFFSET;
-  visual_servoing.cd = VS_CD;
-  visual_servoing.div_cutoff_freq = VS_DIV_CUTOFF_FREQ;
+  visual_servoing.manual_switching = VS_MANUAL_SWITCHING;
+  visual_servoing.new_set_point = VS_NEW_SET_POINT;
+  visual_servoing.color_count_threshold = VS_CC_THRESHOLD;
   visual_servoing.pitch_sum = 0;
   visual_servoing.delta_pixels = 0;
   visual_servoing.color_count = 0;
@@ -235,6 +217,7 @@ void visual_servoing_module_init(void)
 
 static void reset_all_vars(void)
 {
+  visual_servoing.set_point = VS_SET_POINT;
   visual_servoing.dt = 0.065;
   visual_servoing.mu_x = 0;
   visual_servoing.mu_y = 0;
@@ -251,7 +234,6 @@ static void reset_all_vars(void)
   visual_servoing.div_err = 0;
   visual_servoing.previous_div_err = 0;
   visual_servoing.div_err_sum = 0;
-  visual_servoing.div_err_d = 0;
   visual_servoing.distance_est = 10;
   pitch_sp = 0;
   roll_sp = 0;
@@ -301,8 +283,11 @@ void visual_servoing_module_run(bool in_flight)
     switch_time_start = (float)get_sys_time_usec() / 1e6;
     visual_servoing.pitch_sum = 0;
     start_color_count = visual_servoing.color_count;
-    magnitude = visual_servoing.switch_time_constant; // (float)((rand() % 10) + 5) / 10;
-    // printf("magnitude %f", magnitude);
+  }
+
+  // When manual switching
+  if (visual_servoing.manual_switching == 1 && set_point_count == 0 && visual_servoing.color_count > visual_servoing.color_count_threshold){
+    visual_servoing.set_point = visual_servoing.new_set_point;
     set_point_count += 1;
   }
   
@@ -336,12 +321,12 @@ void visual_servoing_module_run(bool in_flight)
     true_distance = sqrtf(pow(4 - position->x, 2) + pow(0 - position->y, 2) + pow(0.7 + position->z, 2));
     visual_servoing.true_divergence = speed->x / true_distance;
 
-    // // 2 [1/s] ramp to setpoint
-    // if (fabsf(visual_servoing.set_point - visual_servoing.divergence_sp) > 0.1*visual_servoing.dt){
-    //   visual_servoing.divergence_sp += 0.1*visual_servoing.dt * visual_servoing.set_point / fabsf(visual_servoing.set_point);
-    // } else {
-    //   visual_servoing.divergence_sp = visual_servoing.set_point;
-    // }
+    // 2 [1/s] ramp to setpoint
+    if (fabsf(visual_servoing.set_point - visual_servoing.divergence_sp) > 0.1*visual_servoing.dt){
+      visual_servoing.divergence_sp += 0.1*visual_servoing.dt * visual_servoing.set_point / fabsf(visual_servoing.set_point);
+    } else {
+      visual_servoing.divergence_sp = visual_servoing.set_point;
+    }
 
     visual_servoing.div_err = visual_servoing.divergence_sp - visual_servoing.divergence;
 
@@ -349,7 +334,7 @@ void visual_servoing_module_run(bool in_flight)
     update_errors(visual_servoing.box_centroid_x, visual_servoing.box_centroid_y, visual_servoing.div_err, visual_servoing.dt);
   }
 
-  // Extrapolate divergence estimate
+  // Extrapolate distance estimate
   visual_servoing.distance_est = switch_distance * expf(-visual_servoing.divergence_sp * time_since_last);
 
   // Compute desired inertial accelerations with PID
@@ -357,13 +342,12 @@ void visual_servoing_module_run(bool in_flight)
   // // This gives sin input to the forward acceleration to make Figure ?? of the paper
   // visual_servoing.mu_x = 1 * (speed->x - 1); // (0.7 * sinf(2 * M_PI * vs_time * 0.5f) + 0.1);
 
-  if (!switching){   
+  if (!switching || visual_servoing.manual_switching){   
     visual_servoing.mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
-          - visual_servoing.ol_x_igain * visual_servoing.div_err_sum
-          - visual_servoing.ol_x_dgain * visual_servoing.div_err_d;
+          - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
   }
   else{
-    visual_servoing.mu_x = divergence_step(switch_time_start, magnitude);
+    visual_servoing.mu_x = divergence_step(switch_time_start, visual_servoing.switch_magnitude);
   }
   visual_servoing.mu_y = - visual_servoing.ol_y_pgain * (visual_servoing.box_centroid_y - 2) - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
   visual_servoing.mu_z = 9.81 + visual_servoing.ol_z_pgain * (visual_servoing.box_centroid_x + 10) + visual_servoing.ol_z_dgain * visual_servoing.box_x_err_d;
@@ -459,19 +443,22 @@ float divergence_step(float switch_time, float mag)
 {
   float current_time = (float)get_sys_time_usec() / 1e6;
   float delta_time = current_time - switch_time;
-  // printf("current_time %f", current_time);
   float accel_x;
-  if (delta_time < 0.3f){
-    accel_x = -mag; // * sinf(2 * M_PI * delta_time);
-  }
-  // Give a sin input to the forward acceleration 
-  else {accel_x = -mag * expf(-1.2 * delta_time);}
 
+  // Initial acceleration is equal to the given magnitude
+  if (delta_time < 0.3f){
+    accel_x = -mag;
+  }
+  // Exponential decay from initial magnitude
+  else {accel_x = -mag * expf(-visual_servoing.switch_decay * delta_time);}
+
+  // Switch ends after 2.5 seconds or when divergence > 0.3
   float end = 2.5;
   if (delta_time >= end || visual_servoing.divergence > 0.3){
     float new_sp = visual_servoing.divergence;
     visual_servoing.delta_pixels = (sqrtf(visual_servoing.color_count) - sqrtf(start_color_count)) / delta_time;
     visual_servoing.divergence_sp = new_sp;
+    visual_servoing.set_point = new_sp;
     visual_servoing.div_err = 0;
     visual_servoing.div_err_sum = 0;
     visual_servoing.ol_x_pgain = 0.7 / new_sp;
