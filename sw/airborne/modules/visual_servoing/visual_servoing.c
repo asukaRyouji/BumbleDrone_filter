@@ -88,6 +88,10 @@
 #define VS_MANUAL_SWITCHING 0
 #endif
 
+#ifndef VS_APPROACH_MODE
+#define VS_APPROACH_MODE 0
+#endif
+
 #ifndef VS_NEW_SET_POINT
 #define VS_NEW_SET_POINT 0.3
 #endif
@@ -203,6 +207,7 @@ void visual_servoing_module_init(void)
   visual_servoing.distance_est = 10;
   visual_servoing.theta_offset = VS_THETA_OFFSET;
   visual_servoing.manual_switching = VS_MANUAL_SWITCHING;
+  visual_servoing.approach_mode = VS_APPROACH_MODE;
   visual_servoing.new_set_point = VS_NEW_SET_POINT;
   visual_servoing.color_count_threshold = VS_CC_THRESHOLD;
   visual_servoing.pitch_sum = 0;
@@ -339,16 +344,22 @@ void visual_servoing_module_run(bool in_flight)
 
   // Compute desired inertial accelerations with PID
 
-  // // This gives sin input to the forward acceleration to make Figure ?? of the paper
-  // visual_servoing.mu_x = 1 * (speed->x - 1); // (0.7 * sinf(2 * M_PI * vs_time * 0.5f) + 0.1);
-
-  if (!switching || visual_servoing.manual_switching){   
-    visual_servoing.mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
-          - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
+  // When setting approach mode to 1 this gives sin input to the forward acceleration to make Figure 10 of the paper
+  if (visual_servoing.approach_mode == 1){
+    visual_servoing.mu_x = 1 * (speed->x - (0.7 * sinf(2 * M_PI * vs_time * 0.5f) + 0.1));
   }
+  
   else{
-    visual_servoing.mu_x = divergence_step(switch_time_start, visual_servoing.switch_magnitude);
+    if (!switching || visual_servoing.manual_switching){   
+      visual_servoing.mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
+            - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
+    }
+    else{
+      visual_servoing.mu_x = divergence_step(switch_time_start, visual_servoing.switch_magnitude);
+    }
   }
+
+  // Always control y and z with vision
   visual_servoing.mu_y = - visual_servoing.ol_y_pgain * (visual_servoing.box_centroid_y - 2) - visual_servoing.ol_y_dgain * visual_servoing.box_y_err_d;
   visual_servoing.mu_z = 9.81 + visual_servoing.ol_z_pgain * (visual_servoing.box_centroid_x + 10) + visual_servoing.ol_z_dgain * visual_servoing.box_x_err_d;
 
@@ -357,7 +368,7 @@ void visual_servoing_module_run(bool in_flight)
     float mass = (visual_servoing.nominal_throttle * MAX_PPRZ) / 9.81;
     thrust_set = sqrtf(pow(visual_servoing.mu_x, 2) + pow(visual_servoing.mu_y, 2) + pow(visual_servoing.mu_z, 2)) * mass;
 
-    // set desired angles
+    // set desired attitude angles
     pitch_sp = atan2f(visual_servoing.mu_x, visual_servoing.mu_z);
     roll_sp = asinf(mass * visual_servoing.mu_y/thrust_set);
     BoundAbs(pitch_sp, RadOfDeg(10.0));
@@ -367,6 +378,7 @@ void visual_servoing_module_run(bool in_flight)
     final_land_in_box(end_time);
   }
   
+  // Give thrust command to autopilot
   if (in_flight) {
     Bound(thrust_set, 0.25 * guidance_v_nominal_throttle, MAX_PPRZ);
     stabilization_cmd[COMMAND_THRUST] = thrust_set;

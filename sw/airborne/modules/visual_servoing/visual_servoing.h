@@ -54,6 +54,7 @@ struct VisualServoing {
   float delta_pixels;
   float pitch_sum;
   float manual_switching;
+  float approach_mode;
   float new_set_point;
   float color_count_threshold;
 };

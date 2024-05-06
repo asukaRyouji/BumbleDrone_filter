@@ -90,7 +90,20 @@
       <define name="VISUAL_SERVOING_CAMERA" value="front_camera"/>
       <define name="ORANGE_AVOIDER_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION1_ID"/>
       <define name="FLOOR_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION2_ID"/>
-      <define name="VS_MANUAL_SWITCHING" value="1"/>
+      <define name="VS_MANUAL_SWITCHING" value="0"/>
+      <define name="VS_APPROACH_MODE" value="1"/>
+      <define name="NOM_THROTTLE" value="0.682"/>
+      <define name="SET_POINT" value="0.2"/>
+      <define name="OL_X_PGAIN" value="3"/>
+      <define name="OL_Y_PGAIN" value="0.015"/>
+      <define name="OL_Z_PGAIN" value="0.01"/>
+      <define name="OL_Y_DGAIN" value="0.015"/>
+      <define name="OL_Z_DGAIN" value="0.005"/>
+      <define name="OL_X_IGAIN" value="0.01"/>
+      <define name="LP_CONST" value="12"/>
+      <define name="SWITCH_MAGNITUDE" value="1.5"/>
+      <define name="SWITCH_DECAY" value="1.2"/>
+      <define name="CC_THRESHOLD" value="5000"/>
     </module>
     <module name="video_rtp_stream">
       <define name="VIEWVIDEO_CAMERA" value="front_camera"/>
