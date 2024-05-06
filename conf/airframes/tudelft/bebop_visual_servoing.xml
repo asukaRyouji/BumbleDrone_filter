@@ -91,7 +91,7 @@
       <define name="ORANGE_AVOIDER_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION1_ID"/>
       <define name="FLOOR_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION2_ID"/>
       <define name="VS_MANUAL_SWITCHING" value="0"/>
-      <define name="VS_APPROACH_MODE" value="1"/>
+      <define name="VS_APPROACH_MODE" value="0"/>
       <define name="NOM_THROTTLE" value="0.682"/>
       <define name="SET_POINT" value="0.2"/>
       <define name="OL_X_PGAIN" value="3"/>
