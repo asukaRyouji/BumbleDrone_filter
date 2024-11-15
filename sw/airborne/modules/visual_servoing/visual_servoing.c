@@ -37,7 +37,7 @@
 #endif
 
 #ifndef VS_NOM_THROTTLE
-#define VS_NOM_THROTTLE 0.682
+#define VS_NOM_THROTTLE 0.666
 #endif
 
 #ifndef VS_SET_POINT
@@ -346,9 +346,18 @@ void visual_servoing_module_run(bool in_flight)
 
   // When setting approach mode to 1 this gives sin input to the forward acceleration to make Figure 10 of the paper
   if (visual_servoing.approach_mode == 1){
-    visual_servoing.mu_x = 1 * (speed->x - (0.7 * sinf(2 * M_PI * vs_time * 0.5f) + 0.1));
+    visual_servoing.mu_x = 1 * (speed->x - (0.7 * sinf(2 * M_PI * vs_time * 0.5f) + 0.7));
   }
-  
+
+  else if (visual_servoing.approach_mode == 2){
+   if(speed->x >= -0.5){
+     visual_servoing.mu_x = -0.5;
+   }
+   else{
+     visual_servoing.mu_x = 0.0;
+   }
+  }
+
   else{
     if (!switching || visual_servoing.manual_switching){   
       visual_servoing.mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
