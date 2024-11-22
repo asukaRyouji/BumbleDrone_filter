@@ -41,7 +41,7 @@
 #endif
 
 #ifndef VS_SET_POINT
-#define VS_SET_POINT 0.2
+#define VS_SET_POINT 0.0
 #endif
 
 #ifndef VS_OL_X_PGAIN
@@ -65,7 +65,7 @@
 #endif
 
 #ifndef VS_OL_X_IGAIN
-#define VS_OL_X_IGAIN 0.01
+#define VS_OL_X_IGAIN 0.015
 #endif
 
 #ifndef VS_LP_CONST
@@ -81,7 +81,7 @@
 #endif
 
 #ifndef VS_SWITCH_DECAY
-#define VS_SWITCH_DECAY 1.2
+#define VS_SWITCH_DECAY 1.0
 #endif
 
 #ifndef VS_MANUAL_SWITCHING
@@ -136,7 +136,9 @@ static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev
                                 &(stateGetAccelNed_f()->x),
                                 &visual_servoing.divergence_sp,
                                 &visual_servoing.div_err_sum,
-                                &visual_servoing.mu_x);
+                                &visual_servoing.mu_x,
+                                &visual_servoing.p_output,
+                                &visual_servoing.i_output);
 }
 
 // This call back will be used to receive the color count and centroid from the orange detector
@@ -213,6 +215,8 @@ void visual_servoing_module_init(void)
   visual_servoing.pitch_sum = 0;
   visual_servoing.delta_pixels = 0;
   visual_servoing.color_count = 0;
+  visual_servoing.p_output = 0;
+  visual_servoing.i_output = 0;
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -247,7 +251,9 @@ static void reset_all_vars(void)
   visual_servoing.box_centroid_x = 0;
   visual_servoing.box_centroid_y = 0;
   set_point_count = 0;
-  visual_servoing.divergence_sp = 0.2;
+  visual_servoing.divergence_sp = 0.10;
+  visual_servoing.p_output = 0;
+  visual_servoing.i_output = 0;
   landing = FALSE;
   switch_time_start = 0;
   switch_time_end = 0;
@@ -273,7 +279,7 @@ void visual_servoing_module_run(bool in_flight)
   prev_vision_time = vision_time;
 
   // Initiate final landing maneuver
-  if (visual_servoing.color_count > 50000 && !landing){
+  if (visual_servoing.color_count > 55000 && !landing){
     landing = TRUE;
     end_time = (float)get_sys_time_usec() / 1e6;
   }
@@ -283,7 +289,7 @@ void visual_servoing_module_run(bool in_flight)
   float time_since_last = vs_time - switch_time_end;
 
   // Initiate divergence step
-  if (visual_servoing.color_count != 0 && !switching && time_since_last > 2. && visual_servoing.divergence_sp < 0.25){
+  if (visual_servoing.color_count != 0 && !switching && time_since_last > 3. && visual_servoing.divergence_sp < 0.25){
     switching = TRUE;
     switch_time_start = (float)get_sys_time_usec() / 1e6;
     visual_servoing.pitch_sum = 0;
@@ -346,7 +352,7 @@ void visual_servoing_module_run(bool in_flight)
 
   // When setting approach mode to 1 this gives sin input to the forward acceleration to make Figure 10 of the paper
   if (visual_servoing.approach_mode == 1){
-    visual_servoing.mu_x = 1 * (speed->x - (0.7 * sinf(2 * M_PI * vs_time * 0.5f) + 0.7));
+    visual_servoing.mu_x = 1 * (speed->x - (0.7 * sinf(2 * M_PI * vs_time * 0.9f) + 0.7));
   }
 
   else if (visual_servoing.approach_mode == 2){
@@ -362,9 +368,13 @@ void visual_servoing_module_run(bool in_flight)
     if (!switching || visual_servoing.manual_switching){   
       visual_servoing.mu_x = - visual_servoing.ol_x_pgain * visual_servoing.div_err 
             - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
+      visual_servoing.p_output = - visual_servoing.ol_x_pgain * visual_servoing.div_err;
+      visual_servoing.i_output = - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
     }
     else{
       visual_servoing.mu_x = divergence_step(switch_time_start, visual_servoing.switch_magnitude);
+      visual_servoing.p_output = 0.0;
+      visual_servoing.i_output = 0.0;
     }
   }
 
@@ -440,19 +450,19 @@ void final_land_in_box(float start_time)
   float c_time = (float)get_sys_time_usec() / 1e6;
   float d_time = c_time - start_time;
   // first 2 seconds accelerate forward
-  if (d_time <= 1.5f){
-    pitch_sp = -0.03;
-    roll_sp = -0.001;
+  if (d_time <= 3.0f){
+    pitch_sp = -0.08;
+    roll_sp = 0;
     thrust_set = visual_servoing.nominal_throttle * MAX_PPRZ * 0.99;
   }
   // then, 1 second descending
-  if (1.5f < d_time && d_time <= 1.75f){
-    pitch_sp = 0;
+  if (3.0f < d_time && d_time <= 5.0f){
+    pitch_sp = -0.03;
     roll_sp = 0;
-    thrust_set = visual_servoing.nominal_throttle * MAX_PPRZ * 0.85;
+    thrust_set = visual_servoing.nominal_throttle * MAX_PPRZ * 0.91;
   }
   // kill throttle
-  if (d_time > 1.75f){
+  if (d_time > 7.00f){
     autopilot_set_kill_throttle(true);
   }
 }
@@ -467,22 +477,33 @@ float divergence_step(float switch_time, float mag)
   float accel_x;
 
   // Initial acceleration is equal to the given magnitude
-  if (delta_time < 0.3f){
+  if (delta_time < 0.5f){
     accel_x = -mag;
   }
   // Exponential decay from initial magnitude
   else {accel_x = -mag * expf(-visual_servoing.switch_decay * delta_time);}
 
   // Switch ends after 2.5 seconds or when divergence > 0.3
-  float end = 2.5;
-  if (delta_time >= end || visual_servoing.divergence > 0.3){
+  float end = 1.7;
+  if (delta_time >= end || visual_servoing.divergence > 0.5){
     float new_sp = visual_servoing.divergence;
     visual_servoing.delta_pixels = (sqrtf(visual_servoing.color_count) - sqrtf(start_color_count)) / delta_time;
     visual_servoing.divergence_sp = new_sp;
     visual_servoing.set_point = new_sp;
     visual_servoing.div_err = 0;
-    visual_servoing.div_err_sum = 0;
-    visual_servoing.ol_x_pgain = 0.7 / new_sp;
+    if (visual_servoing.divergence_sp < 0.1){
+      visual_servoing.div_err_sum = 50;
+    }
+    else if (visual_servoing.divergence_sp < 0.25){
+      visual_servoing.div_err_sum = 40;
+    }
+    else if (visual_servoing.divergence_sp < 0.4){
+      visual_servoing.div_err_sum = 30;
+    }
+    else {visual_servoing.div_err_sum = 20;
+    }
+//    visual_servoing.ol_x_pgain = 0.16 / (new_sp * new_sp);
+    visual_servoing.ol_x_pgain = 0.80 / new_sp;
     switch_distance = 0.09f* powf(-visual_servoing.pitch_sum, 0.483f) * powf(new_sp, -1.02f);
     switch_time_end = current_time;
     switching = FALSE;

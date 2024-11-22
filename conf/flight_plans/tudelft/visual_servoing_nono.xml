@@ -1,6 +1,6 @@
 <!DOCTYPE flight_plan SYSTEM "../flight_plan.dtd">
 
-<flight_plan alt="1.0" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="60" name="Bebop avoid orange TU Delft Cyberzoo" security_height="0.4">
+<flight_plan alt="0.75" ground_alt="0" lat0="51.990634" lon0="4.376789" max_dist_from_home="60" name="Bebop avoid orange TU Delft Cyberzoo" security_height="0.4">
   <header>
     #include "modules/datalink/datalink.h"
     #include "modules/nav/waypoints.h"
@@ -23,9 +23,9 @@ inline void setModule(void){
     <waypoint name="2" x="0.0" y="2.0" height="1."/>
     <waypoint name="3" x="0.5" y="1.0" height="1.5"/>
     <waypoint name="4" x="-0.5" y="0.0" height="1."/>
-    <waypoint name="5" x="2.0" y="-1.0" height="2."/>
+    <waypoint name="5" x="2.0" y="-1.0" height="1.5"/>
     <waypoint name="6" x="-2.0" y="-2.0" height="0.5"/>
-    <waypoint name="7" x="2.0" y="-3.0" height="2."/>
+    <waypoint name="7" x="2.0" y="-3.0" height="1.5"/>
     <waypoint name="8" x="0.0" y="-4.0" height="1.0"/>
     <waypoint name="9" x="0.0" y="-5.0" height="1."/>
     <waypoint name="11" x="1.9" y="1.0" height="1."/>

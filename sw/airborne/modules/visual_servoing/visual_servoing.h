@@ -57,6 +57,8 @@ struct VisualServoing {
   float approach_mode;
   float new_set_point;
   float color_count_threshold;
+  float p_output;
+  float i_output;
 };
 
 extern struct VisualServoing visual_servoing;
