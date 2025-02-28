@@ -156,7 +156,7 @@
         <arg flag="--x_angle_from_right"/>
         <arg flag="-23.0"/>
         <arg flag="--ac_nose" constant="right"/>
-        <arg flag="-ac" constant="18"/>
+        <arg flag="-ac" constant="54"/>
         <arg flag="45"/>
       </program>
       <program name="Messages"/>

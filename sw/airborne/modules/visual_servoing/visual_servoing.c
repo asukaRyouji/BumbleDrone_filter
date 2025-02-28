@@ -77,7 +77,7 @@
 #endif
 
 #ifndef VS_SWITCH_MAGNITUDE
-#define VS_SWITCH_MAGNITUDE 1.5
+#define VS_SWITCH_MAGNITUDE 1.2
 #endif
 
 #ifndef VS_SWITCH_DECAY
@@ -90,6 +90,10 @@
 
 #ifndef VS_APPROACH_MODE
 #define VS_APPROACH_MODE 0
+#endif
+
+#ifndef VS_ABLATION_MODE
+#define VS_ABLATION_MODE 1
 #endif
 
 #ifndef VS_NEW_SET_POINT
@@ -113,10 +117,16 @@ float true_distance = 0;
 int8_t set_point_count = 0;
 bool landing = FALSE;
 bool switching = FALSE;
-float switch_time_start = 0;
-float switch_time_end = 0;
+float switch_time_start = 0.0;
+float switch_time_end = 0.0;
 float start_color_count = 0;
 float switch_distance = 10;
+// To begin the first PID phase for Ablation experiments
+bool reset_switch_time_end_bool = FALSE;
+bool first_interation = FALSE;
+
+int switch_count = 0;
+float divsp_list[4] = {0.037963f, 0.105616f, 0.174661f, 0.523801f};
 
 // Setup the message for the logger
 static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev)
@@ -138,7 +148,8 @@ static void send_vs_attitude(struct transport_tx *trans, struct link_device *dev
                                 &visual_servoing.div_err_sum,
                                 &visual_servoing.mu_x,
                                 &visual_servoing.p_output,
-                                &visual_servoing.i_output);
+                                &visual_servoing.i_output,
+                                &visual_servoing.pid_on);
 }
 
 // This call back will be used to receive the color count and centroid from the orange detector
@@ -172,6 +183,8 @@ static void update_errors(float box_x_err, float box_y_err, float div_err, float
 static void final_land_in_box(float start_time);
 
 static float divergence_step(float switch_time, float magnitude);
+
+static float reset_switch_time_end(float switch_time_end);
 
 /*
  * Initialisation function
@@ -210,6 +223,7 @@ void visual_servoing_module_init(void)
   visual_servoing.theta_offset = VS_THETA_OFFSET;
   visual_servoing.manual_switching = VS_MANUAL_SWITCHING;
   visual_servoing.approach_mode = VS_APPROACH_MODE;
+  visual_servoing.ablation_mode = VS_ABLATION_MODE;
   visual_servoing.new_set_point = VS_NEW_SET_POINT;
   visual_servoing.color_count_threshold = VS_CC_THRESHOLD;
   visual_servoing.pitch_sum = 0;
@@ -217,6 +231,8 @@ void visual_servoing_module_init(void)
   visual_servoing.color_count = 0;
   visual_servoing.p_output = 0;
   visual_servoing.i_output = 0;
+  visual_servoing.pid_on = 2;
+  visual_servoing.time_since_last = 0.0;
 
   // bind our colorfilter callbacks to receive the color filter outputs
   AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -251,15 +267,19 @@ static void reset_all_vars(void)
   visual_servoing.box_centroid_x = 0;
   visual_servoing.box_centroid_y = 0;
   set_point_count = 0;
-  visual_servoing.divergence_sp = 0.10;
+  visual_servoing.divergence_sp = VS_SET_POINT;
   visual_servoing.p_output = 0;
   visual_servoing.i_output = 0;
+  visual_servoing.pid_on = 0;
   landing = FALSE;
-  switch_time_start = 0;
-  switch_time_end = 0;
+  switch_time_start = 0.0;
+  switch_time_end = 0.0;
   visual_servoing.pitch_sum = 0;
   switch_distance = 10;
   switching = FALSE;
+  first_interation = FALSE;
+  reset_switch_time_end_bool = FALSE;
+  switch_count = 0;
 }
 
 
@@ -286,10 +306,16 @@ void visual_servoing_module_run(bool in_flight)
 
   // Calculate time after the last set-point switch
   float vs_time = (float)get_sys_time_usec() / 1e6;
-  float time_since_last = vs_time - switch_time_end;
 
-  // Initiate divergence step
-  if (visual_servoing.color_count != 0 && !switching && time_since_last > 3. && visual_servoing.divergence_sp < 0.25){
+  // Reset the switch_time_end at the beginning to start PID phase for the ablation tests
+  switch_time_end = reset_switch_time_end(switch_time_end);
+
+  float time_since_last = vs_time - switch_time_end;
+  
+  visual_servoing.time_since_last = time_since_last;
+
+  // Initiate divergence step 0.25 before 3 secs before
+  if (visual_servoing.color_count != 0 && !switching && time_since_last > 4.7 && visual_servoing.divergence_sp < 0.25){
     switching = TRUE;
     switch_time_start = (float)get_sys_time_usec() / 1e6;
     visual_servoing.pitch_sum = 0;
@@ -333,8 +359,11 @@ void visual_servoing_module_run(bool in_flight)
     visual_servoing.true_divergence = speed->x / true_distance;
 
     // 2 [1/s] ramp to setpoint
-    if (fabsf(visual_servoing.set_point - visual_servoing.divergence_sp) > 0.1*visual_servoing.dt){
-      visual_servoing.divergence_sp += 0.1*visual_servoing.dt * visual_servoing.set_point / fabsf(visual_servoing.set_point);
+    // one error spoted, Sander updated the div_sp with setpoint instead of the error between div_sp and set_point
+    float divergence_sp_err = visual_servoing.set_point - visual_servoing.divergence_sp;
+
+    if (fabsf(divergence_sp_err) > 0.1*visual_servoing.dt){
+      visual_servoing.divergence_sp += 0.1*visual_servoing.dt * divergence_sp_err / fabsf(divergence_sp_err);
     } else {
       visual_servoing.divergence_sp = visual_servoing.set_point;
     }
@@ -370,11 +399,13 @@ void visual_servoing_module_run(bool in_flight)
             - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
       visual_servoing.p_output = - visual_servoing.ol_x_pgain * visual_servoing.div_err;
       visual_servoing.i_output = - visual_servoing.ol_x_igain * visual_servoing.div_err_sum;
+      visual_servoing.pid_on = 1;
     }
     else{
       visual_servoing.mu_x = divergence_step(switch_time_start, visual_servoing.switch_magnitude);
       visual_servoing.p_output = 0.0;
       visual_servoing.i_output = 0.0;
+      visual_servoing.pid_on = 0;
     }
   }
 
@@ -476,40 +507,114 @@ float divergence_step(float switch_time, float mag)
   float delta_time = current_time - switch_time;
   float accel_x;
 
-  // Initial acceleration is equal to the given magnitude
-  if (delta_time < 0.5f){
-    accel_x = -mag;
-  }
-  // Exponential decay from initial magnitude
-  else {accel_x = -mag * expf(-visual_servoing.switch_decay * delta_time);}
+// Ablation mode 0: normal visual servo approach, 1: increase wrt time / current measurement
+  if (visual_servoing.ablation_mode == 0){
+    // Initial acceleration is equal to the given magnitude
+    if (delta_time < 0.5f){
+      accel_x = -mag;
+    }
+    // Exponential decay from initial magnitude
+    else {accel_x = -mag * expf(-visual_servoing.switch_decay * delta_time);}
 
-  // Switch ends after 2.5 seconds or when divergence > 0.3
-  float end = 1.7;
-  if (delta_time >= end || visual_servoing.divergence > 0.5){
-    float new_sp = visual_servoing.divergence;
-    visual_servoing.delta_pixels = (sqrtf(visual_servoing.color_count) - sqrtf(start_color_count)) / delta_time;
-    visual_servoing.divergence_sp = new_sp;
-    visual_servoing.set_point = new_sp;
-    visual_servoing.div_err = 0;
-    if (visual_servoing.divergence_sp < 0.1){
-      visual_servoing.div_err_sum = 50;
+    // Switch ends after 2.5 seconds or when divergence > 0.3
+    float end = 1.7;
+    if (delta_time >= end || visual_servoing.divergence > 0.5){
+      float new_sp = visual_servoing.divergence;
+      visual_servoing.delta_pixels = (sqrtf(visual_servoing.color_count) - sqrtf(start_color_count)) / delta_time;
+      visual_servoing.divergence_sp = new_sp;
+      visual_servoing.set_point = new_sp;
+      visual_servoing.div_err = 0;
+    // Non-adaptive integral control  
+//      visual_servoing.div_err_sum = 0;
+    // Adaptive integral feedforward term
+      if (visual_servoing.divergence_sp < 0.1){
+        visual_servoing.div_err_sum = 50;
+      }
+      else if (visual_servoing.divergence_sp < 0.25){
+        visual_servoing.div_err_sum = 40;
+      }
+      else if (visual_servoing.divergence_sp < 0.4){
+        visual_servoing.div_err_sum = 30;
+      }
+      else {visual_servoing.div_err_sum = 20;
+      }
+
+  //    visual_servoing.ol_x_pgain = 0.16 / (new_sp * new_sp);
+      visual_servoing.ol_x_pgain = 0.80 / new_sp;
+  //    visual_servoing.ol_x_pgain = 20.0;
+      switch_distance = 0.09f* powf(-visual_servoing.pitch_sum, 0.483f) * powf(new_sp, -1.02f);
+      switch_time_end = current_time;
+      switching = FALSE;
     }
-    else if (visual_servoing.divergence_sp < 0.25){
-      visual_servoing.div_err_sum = 40;
+  }
+
+  if(visual_servoing.ablation_mode == 1){
+    accel_x = -0.2;
+    if (switching || visual_servoing.divergence > 0.5){
+//      float new_sp = visual_servoing.divergence_sp + 0.05;
+//      float new_sp = visual_servoing.divergence;
+      float new_sp = divsp_list[switch_count];
+      switch_count += 1;
+
+      visual_servoing.delta_pixels = (sqrtf(visual_servoing.color_count) - sqrtf(start_color_count)) / delta_time;
+      visual_servoing.divergence_sp = new_sp;
+      visual_servoing.set_point = new_sp;
+      visual_servoing.div_err = 0;
+    // Non-adaptive integral control  
+//      visual_servoing.div_err_sum = 0;
+    // Adaptive integral feedforward term
+      if (visual_servoing.divergence_sp < 0.1){
+        visual_servoing.div_err_sum = 50;
+      }
+      else if (visual_servoing.divergence_sp < 0.25){
+        visual_servoing.div_err_sum = 40;
+      }
+      else if (visual_servoing.divergence_sp < 0.4){
+        visual_servoing.div_err_sum = 30;
+      }
+      else {visual_servoing.div_err_sum = 20;
+      }
+
+  //    visual_servoing.ol_x_pgain = 0.16 / (new_sp * new_sp);
+      visual_servoing.ol_x_pgain = 0.80 / new_sp;
+  //    visual_servoing.ol_x_pgain = 20.0;
+      switch_distance = 0.09f* powf(-visual_servoing.pitch_sum, 0.483f) * powf(new_sp, -1.02f);
+      switch_time_end = current_time;
+      switching = FALSE;
     }
-    else if (visual_servoing.divergence_sp < 0.4){
-      visual_servoing.div_err_sum = 30;
-    }
-    else {visual_servoing.div_err_sum = 20;
-    }
-//    visual_servoing.ol_x_pgain = 0.16 / (new_sp * new_sp);
-    visual_servoing.ol_x_pgain = 0.80 / new_sp;
-    switch_distance = 0.09f* powf(-visual_servoing.pitch_sum, 0.483f) * powf(new_sp, -1.02f);
-    switch_time_end = current_time;
-    switching = FALSE;
-  }  
+  }
 
   return accel_x;
+}
+
+/** Function to reset switch_time_end as 0 at the first interation to enter the PID phase at the beginning
+ * 
+ */
+float reset_switch_time_end(float switchTimeEnd){
+  if (reset_switch_time_end_bool){
+    if (first_interation){
+
+      switchTimeEnd = (float)get_sys_time_usec() / 1e6;
+
+      if (visual_servoing.divergence_sp < 0.1){
+        visual_servoing.div_err_sum = 50;
+      }
+      else if (visual_servoing.divergence_sp < 0.25){
+        visual_servoing.div_err_sum = 40;
+      }
+      else if (visual_servoing.divergence_sp < 0.4){
+        visual_servoing.div_err_sum = 30;
+      }
+      else {visual_servoing.div_err_sum = 20;
+      }
+
+      visual_servoing.ol_x_pgain = 0.80 / VS_SET_POINT;
+
+      first_interation = FALSE;
+    }
+  }
+
+  return switchTimeEnd;
 }
 
 ////////////////////////////////////////////////////////////////////

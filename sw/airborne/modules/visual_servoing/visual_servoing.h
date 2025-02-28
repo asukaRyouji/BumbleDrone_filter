@@ -55,10 +55,13 @@ struct VisualServoing {
   float pitch_sum;
   float manual_switching;
   float approach_mode;
+  float ablation_mode;
   float new_set_point;
   float color_count_threshold;
   float p_output;
   float i_output;
+  float pid_on;
+  float time_since_last;
 };
 
 extern struct VisualServoing visual_servoing;
