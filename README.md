@@ -84,3 +84,12 @@ Flight
 ------
 
 1.  From the Paparazzi Center, select the flight session and ... do the same as in simulation !
+
+Visual servoing control
+------
+
+1. The visual servoing control system is included in the folder /sw/airborne/modules/visual_servoing.
+
+2. When flying with stepwise constant-divergence strategy with forward acceleration phase, set the ablation_mode as 0.
+
+3. When flying with stepwise constant-divergence strategy without forward acceleration phase, set the ablation_mode as 1.
