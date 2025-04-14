@@ -88,13 +88,16 @@ Flight
 Visual servoing control
 ------
 
-1. The visual servoing control system is included in the folder /sw/airborne/modules/visual_servoing.
+1. The visual servoing control system is included in the files in the folder /sw/airborne/modules/visual_servoing.
 
-2. When flying with stepwise constant-divergence strategy with open-loop forward acceleration phase, set the ablation_mode as 0.
+2. When flying with stepwise constant-divergence strategy (3.0 sec) with open-loop forward acceleration phase (1.7 sec), set the ablation_mode as 0.
+   Remember to change the operating duration from 4.7 sec to 3.0 sec before uploading the code.
 
-3. When flying with stepwise constant-divergence strategy without open-loop forward acceleration phase, set the ablation_mode as 1.
+4. When flying with stepwise constant-divergence strategy without open-loop forward acceleration phase, set the ablation_mode as 1.
    Remember to set the divergence setpoint in the vairable divsp_list.
 
-4. Approach mode == 1: Sinusoidal forward acceleration mode for adaptive filter validation.
+5. Approach mode == 1: Sinusoidal forward acceleration mode for adaptive filter validation.
 
-5. Approach mode == 2: Constant velocity forward flight mode.
+6. Approach mode == 2: Constant velocity forward flight mode.
+
+7. Adjust the olx_pgain in the divergence_step function to turn off the adaptive p gain for x axis.
