@@ -101,5 +101,5 @@ Visual servoing control
 
 6. Approach mode == 2: Constant velocity forward flight mode.
 
-7. Adjust the olx_pgain in the divergence_step function to turn off the adaptive p gain for x axis.
+7. Adjust the variable ol_x_pgain in the divergence_step function to set/turn off the adaptive p gain for x axis.
    Warning: this will result in severe oscillations in front of the landing target, which may lead to undesired crash and damages.
