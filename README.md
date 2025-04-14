@@ -88,17 +88,18 @@ Flight
 Visual servoing control
 ------
 
-1. The visual servoing control system is included and defined in the files in the folder /sw/airborne/modules/visual_servoing.
+1. The visual servoing control system is included and defined in the files in the folder sw/airborne/modules/visual_servoing.
+   Default values of important parameters are defiend in the file conf/airframes/tudelft/bebop_visual_servoing.xml.
 
-2. Ablation mode == 0: Flying with stepwise constant-divergence strategy with open-loop forward acceleration phase (3.0 sec + 1.7 sec).
+3. Ablation mode == 0: Flying with stepwise constant-divergence strategy with open-loop forward acceleration phase (3.0 sec + 1.7 sec).
    Remember to change the operating duration from 4.7 sec to 3.0 sec before uploading the code.
 
-3. Ablation mode == 1: Flying with stepwise constant-divergence strategy without open-loop forward acceleration phase (4.7 sec + 0.0 sec).
+4. Ablation mode == 1: Flying with stepwise constant-divergence strategy without open-loop forward acceleration phase (4.7 sec + 0.0 sec).
    Remember to set divergence setpoints properly in the vairable divsp_list.
 
-4. Approach mode == 1: Sinusoidal forward acceleration mode for adaptive filter validation.
+5. Approach mode == 1: Sinusoidal forward acceleration mode for adaptive filter validation.
 
-5. Approach mode == 2: Constant velocity forward flight mode.
+6. Approach mode == 2: Constant velocity forward flight mode.
 
-6. Adjust the olx_pgain in the divergence_step function to turn off the adaptive p gain for x axis.
-   Warning: this will result in severe oscillations in front of the landing target, which may lead to mayday or damages.
+7. Adjust the olx_pgain in the divergence_step function to turn off the adaptive p gain for x axis.
+   Warning: this will result in severe oscillations in front of the landing target, which may lead to undesired crash and damages.
